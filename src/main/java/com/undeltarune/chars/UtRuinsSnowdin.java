@@ -959,10 +959,10 @@ public final class UtRuinsSnowdin {
     static Attack looxWorms() {
         return atk("sphere_worms", 90, null, (c, t) -> {
             Board b = board(c, t);
-            for (int w = 0; w < 4; w++) for (int j = 0; j < 5; j++) {
+            for (int w = 0; w < 4; w++) for (int j = 0; j < 5; j++) { final int j0 = j;
                 int from = w % 2 == 0 ? -1 : 1, t0 = 6 + w * 12 + j * 3; double z = (w - 1.5) * 1.1;
                 step(c, t, t0, t0 + 54, 6, k -> { double u = k - t0; return b.at(from * (4.5 - u * .17), 1 + .5 * Math.sin(u * .35), z + .4 * Math.cos(u * .35)); },
-                    p -> p.box(.3f, .3f, .3f).color(j == 0 ? 0xd22020 : 0xdcdce6).dmg(2).spawn());
+                    p -> p.box(.3f, .3f, .3f).color(j0 == 0 ? 0xd22020 : 0xdcdce6).dmg(2).spawn());
             }
         }, (p, t, m) -> p.r("body", 0, (float) Math.sin(t * .2f) * .3f, (float) Math.sin(t * .4f) * .1f).o("pupil", (float) Math.sin(t * .2f), 0, 0));
     }

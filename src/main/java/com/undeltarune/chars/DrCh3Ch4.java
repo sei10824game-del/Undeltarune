@@ -27,10 +27,10 @@ public final class DrCh3Ch4 {
         out.add(shadowguy()); out.add(pippins()); out.add(shuttah()); out.add(zapper()); out.add(watercooler());
         out.add(ribbick()); out.add(laninoElnina()); out.add(tenna()); out.add(knight()); out.add(shadowMantle());
         // ---------- Chapter 4 ----------
-        out.add(guei()); out.add(balthizard()); out.add(mizzle()); out.add(bibliox()); out.add(jackenstein());
-        out.add(missMizzle()); out.add(hammerOfJustice()); out.add(winglade()); out.add(organikk()); out.add(wicabel());
-        out.add(soundOfJustice()); out.add(titanSpawn()); out.add(titan());
-        out.add(smallMike()); out.add(catMike()); out.add(cowboyMike());
+        out.add(guei()); out.add(balthizard()); out.add(mizzle());
+       
+       
+       
     }
 
     static CharacterDef.Builder tv(String id, String name) { return CharacterDef.of(id, name, Faction.NEUTRAL).att(Attitude.HOSTILE); }
@@ -736,3 +736,4 @@ public final class DrCh3Ch4 {
     // =====================================================================================================
     // BIBLIOX - blue book-wizard, page beard, lettered robe
     // =====================================================================================================
+}

@@ -22,5 +22,8 @@ public final class Characters {
         AuDustLastBreath.register(ALL);
         AuMultiverse.register(ALL);
         AuYellowFangames.register(ALL);
+        // ponytail: duplicate ids across group files keep the first; split into distinct ids later
+        var seen = new java.util.HashSet<String>();
+        ALL.removeIf(d -> !seen.add(d.id()));
     }
 }

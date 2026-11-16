@@ -397,7 +397,7 @@ public final class AuYellowFangames {
             if (t >= 10 && t < 40 && t % 4 == 2) {
                 Vec3 d = c.aim(c.pos()).multiply(1, 0, 1).normalize();
                 Vec3 at = c.pos().add(d.scale(1.5 + (t - 10) * .3));
-                pillar(c, at, 2, .7f, 0x3a9a4a, 5, 8, 18); c.particle(ParticleTypes.BLOCK, at, 0, 0, 0);
+                pillar(c, at, 2, .7f, 0x3a9a4a, 5, 8, 18);
             }
         }, (p, t, m) -> { float s = env(t, 8, 60, 10); p.r("legR", -1.2f * s, 0, 0).r("body", .1f * s, 0, 0); });
     }
