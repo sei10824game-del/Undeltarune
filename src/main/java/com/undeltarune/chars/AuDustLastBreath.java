@@ -17,13 +17,15 @@ import org.joml.Vector3f;
 import java.util.List;
 
 /** Genocide-route AUs: Dusttale (Dust/Murder Sans, Phantom Papyrus), Undertale: Last Breath (Sans phases 1-3,
- *  incl. the Last Corridor "Artifact Frenzy" and "Struggle" sub-phases), Disbelief Papyrus and Dustbelief Papyrus. */
+ *  Dusttale Papyrus/Undyne/Frisk, incl. the Last Corridor "Artifact Frenzy" and "Struggle" sub-phases), Disbelief Papyrus and Dustbelief Papyrus. */
 public final class AuDustLastBreath {
     public static void register(List<CharacterDef> out) {
         out.add(dustSans());
         out.add(phantomPapyrus());
+        out.add(dusttalePapyrus());
+        out.add(dusttaleUndyne());
+        out.add(dusttaleFrisk());
         out.add(lastBreathSans());
-        out.add(disbeliefPapyrus());
         out.add(dustbeliefPapyrus());
     }
 
@@ -218,7 +220,7 @@ public final class AuDustLastBreath {
                 .box("shoeL", "legL", 0, -5.3f, -.6f, 3.4f, 1.1f, 4.6f, 0x2a2a2a)
                 .box("shoeR", "legR", 0, -5.3f, -.6f, 3.4f, 1.1f, 4.6f, 0x2a2a2a))
             .attacks(dustFlurry(), purpleStrings(), telekinesis(), purpleBlasters(), boneKnife(), phantomAssist(), saveBreak(),
-                ph(0, .6f, lvSurge()), ph(0, .35f, madTime()))
+                ph(0, .6f, lvSurge()), ph(0, .35f, madTime()), ph(0, .5f, expDrain()))
             .build();
     }
 
@@ -598,11 +600,304 @@ public final class AuDustLastBreath {
         };
     }
 
+    /** EXP Drain (low HP): grey dust is sucked out of the target into his hoodie; he heals off every LV he has stolen, ringed by purple bones. */
+    static Attack expDrain() {
+        return new Attack("dusttale_exp_drain", 90) {
+            public void tick(AttackCtx c, int t) {
+                Vec3 me = c.pos().add(0, 1.1, 0);
+                if (t == 0) { c.sound(SoundEvents.SOUL_ESCAPE, 1, .5f); spikeRing(c, c.pos(), 2.6, 12, 0, -1, 1.6f, PURPLE, 0, 10, 70); }
+                if (t >= 10 && t < 70) {
+                    Vec3 from = c.tpos(), d = me.subtract(from);
+                    c.particle(dust(0x9d968c, 1.3f), from.add(d.scale((t % 10) / 10.0)), 3, .15, .01);
+                    if (t % 10 == 0) { c.hit(c.target, 2); c.me.heal(3); c.particle(ParticleTypes.SOUL, me, 4, .3, .02); c.sound(SoundEvents.SAND_BREAK, .7f, .7f + t * .01f); }
+                }
+                if (t == 72) { spikeRing(c, c.pos(), 4.5, 16, .2, -1, 1.4f, W, 5, 6, 8); c.sound(SoundEvents.BONE_BLOCK_BREAK, 1, .7f); }
+            }
+            public void pose(Pose p, float t, UtMob m) {
+                float s = env(t, 0, 10, 68, 76), pull = (float) Math.sin(t * .6f) * .15f * s;
+                p.r("armL", -1.5f * s, -.6f * s, 0).r("armR", -1.5f * s, .6f * s, 0).r("armL", pull, 0, 0).r("head", -.3f * s, 0, 0).o("body", 0, .5f * s, 0);
+            }
+        };
+    }
+
+    // ================================================================ DUSTTALE: Papyrus (alive, 327th genocide run; Sans kills him for his LV)
+    static CharacterDef dusttalePapyrus() {
+        return CharacterDef.of("dusttale_papyrus", "Papyrus (Dusttale)", Faction.UNDERGROUND).att(Attitude.NEUTRAL).hp(90).keep(6).rest(18).speed(.3f)
+            .egg(0xeeeeee, 0xd42a2a).size(.7f, 2.3f)
+            .model(papyrusModel(0xeeeeee, 0xd42a2a, 0xf6f6f2, 0xc23030, 0))
+            .attacks(dpGauntlet(), dpBlue(), dpBelieve()).build();
+    }
+    /** Bone gauntlet: lanes of white bones with blue posts slide past from alternating sides while he points the way. */
+    static Attack dpGauntlet() {
+        return new Attack("dusttale_papyrus_gauntlet", 80) {
+            public void tick(AttackCtx c, int t) {
+                if (t == 0) c.sound(SoundEvents.SKELETON_AMBIENT, 1, 1.3f);
+                if (t >= 10 && t < 66 && (t - 10) % 14 == 0) {
+                    Vec3 f = hz(c.tpos().subtract(c.pos())), r = side(f); int w = (t - 10) / 14, s = w % 2 == 0 ? 1 : -1;
+                    for (int k = -2; k <= 2; k++) {
+                        float h = w == 3 && k % 2 == 0 ? 1.8f : 1f;
+                        post(c, c.target.position().add(r.scale(s * 6)).add(f.scale(k * .9)).add(0, h / 2, 0), r.scale(-s * .42), h, (k + w) % 3 == 0 ? BL : W, 3, 8, 34);
+                    }
+                    c.sound(SoundEvents.SKELETON_SHOOT, .6f, 1.2f);
+                }
+            }
+            public void pose(Pose p, float t, UtMob m) {
+                for (int k = 0; k < 4; k++) { float pt = env(t, 4 + k * 14, 8 + k * 14, 12 + k * 14, 16 + k * 14);
+                    p.r(k % 2 == 0 ? "armR" : "armL", -1.5f * pt, 0, (k % 2 == 0 ? -.6f : .6f) * pt).r("head", -.15f * pt, 0, 0); }
+            }
+        };
+    }
+    /** Blue attack: gravity slam, then low bones to hop and high blue bones to stand still under. */
+    static Attack dpBlue() {
+        return new Attack("dusttale_papyrus_blue_attack", 72) {
+            public void tick(AttackCtx c, int t) {
+                if (t == 8) { yank(c, new Vec3(0, -1.4, 0)); c.sound(SoundEvents.ANVIL_LAND, .8f, 1.1f); c.particle(dust(0x3fa7ff, 1.4f), c.tpos(), 18, .4, .05); }
+                if (t >= 14 && t < 60 && (t - 14) % 9 == 0) {
+                    Vec3 f = hz(c.tpos().subtract(c.pos())), at = c.pos().add(f.scale(1.5));
+                    if ((t - 14) % 18 == 0) bar(c, at.add(0, .3, 0), f.scale(.45), 3.2f, W, 3, 4, 30);
+                    else bar(c, at.add(0, 1.1, 0), f.scale(.45), 3.2f, BL, 3, 4, 30);
+                    c.sound(SoundEvents.SKELETON_SHOOT, .5f, 1.4f);
+                }
+            }
+            public void pose(Pose p, float t, UtMob m) {
+                float slam = env(t, 2, 7, 9, 14), proud = env(t, 14, 18, 62, 70);
+                p.r("armR", -2.8f * slam + 2.8f * env(t, 7, 8, 9, 12), 0, 0).r("armL", -1.2f * proud, 0, .9f * proud).r("armR", -1.2f * proud, 0, -.9f * proud).r("head", -.2f * proud, 0, 0);
+            }
+        };
+    }
+    /** "I STILL BELIEVE IN YOU": he refuses to fight back; a ring of harmless bones turns into a heal. */
+    static Attack dpBelieve() {
+        return new Attack("dusttale_papyrus_believe", 60) {
+            public void tick(AttackCtx c, int t) {
+                if (t == 0) c.sound(SoundEvents.AMETHYST_BLOCK_CHIME, 1, .8f);
+                if (t < 40 && t % 4 == 0) { Vec3 a = ang(t * .16).scale(2.4); deco(c, c.tpos().add(a), a, .24f, 1.2f, .24f, W, 20); }
+                if (t == 40) { eff(c, MobEffects.REGENERATION, 60, 0); c.particle(ParticleTypes.HEART, c.tpos().add(0, .8, 0), 8, .5, .05); c.sound(SoundEvents.PLAYER_LEVELUP, .6f, 1.4f); }
+            }
+            public boolean usable(UtMob m) { return m.hpFrac() < .6f; }
+            public void pose(Pose p, float t, UtMob m) {
+                float s = env(t, 0, 10, 50, 60);
+                p.r("armL", -.4f * s, 0, 1.1f * s).r("armR", -.4f * s, 0, -1.1f * s).r("head", .2f * s, 0, .25f * s).o("body", 0, (float) Math.sin(t * .3f) * .2f * s, 0);
+            }
+        };
+    }
+
+    // ================================================================ DUSTTALE: Undyne (fights Murder Sans; her determination makes her undying)
+    static final int SPEAR = 0x3cc8ff;
+    /** Cyan energy spear flying point-first, with a pale tip. */
+    static void spear(AttackCtx c, Vec3 at, Vec3 vel, float dmg, int warn, int life) {
+        lance(c, at, vel, 1.8f, SPEAR, dmg, warn, life);
+        decoV(c, at.add(vel.normalize().scale(.95)), vel, .28f, .28f, .28f, 0xbff6ff, life);
+    }
+    /** Spear bursting straight up out of the ground after a telegraph. */
+    static void groundSpear(AttackCtx c, Vec3 at, float dmg, int warn) {
+        p(c, new Vec3(at.x, ground(c) + .9, at.z), SPEAR).face(new Vec3(0, 1, 0)).box(.22f, .22f, 1.8f).dmg(dmg).warn(warn).life(warn + 8).pierce().spawn();
+    }
+    static CharacterDef dusttaleUndyne() {
+        int armor = 0x3a3f4a, trim = 0xd8dde6, skin = 0x4a8fd8, hair = 0xd0202a;
+        return CharacterDef.of("dusttale_undyne", "Undyne (Dusttale)", Faction.ROYAL_GUARD).att(Attitude.HOSTILE).hp(200).boss().keep(6).rest(12).speed(.36f)
+            .egg(0x3a3f4a, 0x3cc8ff).size(.7f, 2.1f)
+            .model(new ModelDef()
+                .box("body", null, 0, 16, 0, 7.5f, 9, 4.8f, armor)
+                .box("heart", "body", 0, .5f, -2.5f, 3.4f, 3, .3f, trim)
+                .glow("heartCore", "body", 0, .5f, -2.7f, 1.6f, 1.4f, .2f, 0xff2a3a)
+                .box("pauldL", "body", -4.6f, 3.6f, 0, 3, 2.2f, 5.4f, trim)
+                .box("pauldR", "body", 4.6f, 3.6f, 0, 3, 2.2f, 5.4f, trim)
+                .box("skirt", "body", 0, -5, 0, 8, 2, 5.2f, armor)
+                .box("head", "body", 0, 9, 0, 6.5f, 7, 6.5f, skin)
+                .box("finL", "head", -3.6f, 1.6f, .5f, .6f, 4, 3, 0x2a5fb0)
+                .box("finR", "head", 3.6f, 1.6f, .5f, .6f, 4, 3, 0x2a5fb0)
+                .box("hairTop", "head", 0, 3.9f, .4f, 6.9f, 1.2f, 6.9f, hair)
+                .box("ponytail", "head", 0, 1.5f, 4.4f, 2.6f, 7, 2, hair)
+                .box("patch", "head", -1.6f, .8f, -3.3f, 2.2f, 1.8f, .2f, 0x101010)
+                .glow("eyeR", "head", 1.6f, .8f, -3.35f, 1.4f, 1.0f, .2f, 0xfff060)
+                .box("grin", "head", 0, -1.8f, -3.3f, 4, .8f, .2f, 0xf0f0f0)
+                .limb("armL", "body", -4.6f, 3, 0, 2.4f, 9, 2.4f, armor)
+                .limb("armR", "body", 4.6f, 3, 0, 2.4f, 9, 2.4f, armor)
+                .box("gauntL", "armL", 0, -8.5f, 0, 2.9f, 2, 2.9f, trim)
+                .box("gauntR", "armR", 0, -8.5f, 0, 2.9f, 2, 2.9f, trim)
+                .glow("heldSpear", "armR", 0, -9.5f, -2, .5f, .5f, 9, SPEAR)
+                .limb("legL", null, -1.8f, 11.5f, 0, 2.8f, 11.5f, 3, armor)
+                .limb("legR", null, 1.8f, 11.5f, 0, 2.8f, 11.5f, 3, armor)
+                .box("bootL", "legL", 0, -10, -.4f, 3.3f, 3, 3.8f, trim)
+                .box("bootR", "legR", 0, -10, -.4f, 3.3f, 3, 3.8f, trim))
+            .attacks(ph(.5f, 1, undyneVolley()), undyneGreen(), undyneSpearRows(), undyneRing(), ph(0, .5f, undyneUndying()))
+            .build();
+    }
+    /** Spear volley: a fan of spears forms over her head, flashes, and fires at where you're running (three throws). */
+    static Attack undyneVolley() {
+        return new Attack("dusttale_undyne_spear_volley", 70) {
+            public void tick(AttackCtx c, int t) {
+                if (t == 12 || t == 30 || t == 48) {
+                    Vec3 aim = predict(c, 8), base = c.pos().add(0, 3.2, 0), r = side(aim.subtract(c.pos()));
+                    for (int k = -2; k <= 2; k++) { Vec3 at = base.add(r.scale(k * .9)).add(0, -Math.abs(k) * .2, 0);
+                        spear(c, at, aim.add(0, .9, 0).subtract(at).normalize().scale(.9), 5, 8, 30); }
+                    c.sound(SoundEvents.TRIDENT_THROW, 1, 1.1f + t * .005f);
+                } else tvel(c);
+            }
+            public void pose(Pose p, float t, UtMob m) {
+                for (int s : new int[]{12, 30, 48}) { float w = env(t, s - 10, s - 2, s, s + 1), th = env(t, s, s + 2, s + 5, s + 12);
+                    p.r("armR", -2.8f * w + .9f * th, 0, -.2f * w).r("body", .25f * th, .35f * w - .35f * th, 0).r("legL", -.3f * th, 0, 0); }
+            }
+        };
+    }
+    /** Green soul: you're slowed to a crawl and spears come at you from four sides with arrow telegraphs; yellow ones swerve round behind. */
+    static Attack undyneGreen() {
+        return new Attack("dusttale_undyne_green_soul", 96) {
+            public void tick(AttackCtx c, int t) {
+                if (t == 0) { eff(c, MobEffects.MOVEMENT_SLOWDOWN, 90, 4); c.particle(dust(0x30e040, 1.6f), c.tpos(), 24, .4, .05); c.sound(SoundEvents.BEACON_ACTIVATE, 1, 1.6f);
+                    for (int k = 0; k < 4; k++) deco(c, c.tpos().add(ang(k * PI / 2).scale(1.1)), ang(k * PI / 2), .6f, .6f, .08f, 0x30e040, 90); }
+                if (t >= 14 && t < 86 && (t - 14) % 6 == 0) {
+                    int i = (t - 14) / 6; double a = c.rnd.nextInt(4) * PI / 2; boolean swerve = i % 4 == 3;
+                    double from = swerve ? a + PI : a; int col = swerve ? 0xffe040 : SPEAR;
+                    Vec3 at = c.tpos().add(ang(from).scale(9));
+                    lance(c, at, c.tpos().subtract(at).normalize().scale(.55), 1.6f, col, 4, 6, 26);
+                    deco(c, c.tpos().add(ang(from).scale(2)), ang(from), .4f, .05f, 1.2f, col, 6);
+                    if (i % 2 == 0) c.sound(SoundEvents.TRIDENT_THROW, .6f, 1.5f);
+                }
+            }
+            public void pose(Pose p, float t, UtMob m) {
+                float s = env(t, 0, 8, 86, 96), beat = (float) Math.sin(t * 1.05f);
+                p.r("armR", -1.8f * s, beat * .3f * s, 0).r("armL", -.6f * s, 0, .5f * s).r("body", 0, beat * .12f * s, 0).r("head", -.1f * s, 0, 0);
+            }
+        };
+    }
+    /** Rows of spears burst out of the ground in waves marching toward you, each with one gap. */
+    static Attack undyneSpearRows() {
+        return new Attack("dusttale_undyne_spear_rows", 84) {
+            public void tick(AttackCtx c, int t) {
+                if (t == 4) { putV(c, "duF", hz(c.tpos().subtract(c.pos()))); c.sound(SoundEvents.TRIDENT_RIPTIDE_1, 1, .9f); }
+                if (t >= 14 && t < 70 && (t - 14) % 7 == 0) {
+                    int row = (t - 14) / 7, gap = c.rnd.nextInt(7) - 3; Vec3 f = getV(c, "duF"), r = side(f), mid = c.pos().add(f.scale(2 + row * 1.3));
+                    for (int k = -3; k <= 3; k++) if (k != gap) groundSpear(c, mid.add(r.scale(k * .9)), 5, 8);
+                    c.particle(ParticleTypes.BUBBLE_POP, mid, 10, 1.5, .05);
+                }
+            }
+            public void pose(Pose p, float t, UtMob m) {
+                float s = env(t, 2, 10, 70, 80), stab = env(t, 8, 12, 14, 20);
+                p.r("armR", -3.0f * s + 1.4f * stab, 0, 0).r("armL", -3.0f * s + 1.4f * stab, 0, 0).r("body", .3f * stab, 0, 0).o("body", 0, -.6f * stab, 0);
+            }
+        };
+    }
+    /** Spear ring: a circle of spears appears around you, hangs, then all converge at once (twice, second ring denser). */
+    static Attack undyneRing() {
+        return new Attack("dusttale_undyne_spear_ring", 76) {
+            public void tick(AttackCtx c, int t) {
+                if (t == 8 || t == 40) {
+                    Vec3 ctr = c.tpos(); int n = t == 8 ? 8 : 12; double rot = c.rnd.nextDouble() * PI, rad = t == 8 ? 5 : 4;
+                    for (int k = 0; k < n; k++) { Vec3 at = ctr.add(ang(rot + k * 2 * PI / n).scale(rad)); spear(c, at, ctr.subtract(at).normalize().scale(rad / 22), 5, 14, 34); }
+                    c.sound(SoundEvents.TRIDENT_RETURN, 1, .8f);
+                }
+            }
+            public void pose(Pose p, float t, UtMob m) {
+                for (int s : new int[]{8, 40}) { float a = env(t, s - 6, s, s + 12, s + 20);
+                    p.r("armR", -2.6f * a, 0, -.8f * a).r("armL", -2.6f * a, 0, .8f * a).r("head", -.3f * a, 0, 0); }
+            }
+        };
+    }
+    /** Undying (<50%): she refuses to die. Body dripping, she regenerates, aims a yellow sightline and hurls giant spears while spears rise around you. */
+    static Attack undyneUndying() {
+        return new Attack("dusttale_undyne_undying", 110) {
+            public void tick(AttackCtx c, int t) {
+                if (t == 0) { c.sound(SoundEvents.WARDEN_HEARTBEAT, 1.2f, .8f); c.me.heal(10); }
+                if (t < 20) c.particle(dust(0xff2a3a, 1.2f), c.pos().add(0, 1.4, 0), 2, .3, .02);
+                if (t % 5 == 0) c.particle(ParticleTypes.DRIPPING_WATER, c.pos().add(0, 1.2, 0), 3, .3, 0);
+                boolean aimed = false;
+                for (int s : new int[]{24, 54, 84}) {
+                    if (t == s - 12) { aimed = true; Vec3 d = hz(predict(c, 12).subtract(c.pos())); putV(c, "duU", d);
+                        p(c, c.pos().add(0, 1.2, 0).add(d.scale(9)), 0xffe040).face(d).box(.08f, .08f, 18).dmg(0).life(12).pierce().spawn(); }
+                    if (t == s) { Vec3 d = getV(c, "duU");
+                        p(c, c.pos().add(0, 1.2, 0), SPEAR).vel(d.scale(1.25)).box(.7f, .7f, 5).dmg(9).life(18).pierce().spawn();
+                        c.sound(SoundEvents.TRIDENT_THUNDER, .8f, 1.6f); c.particle(ParticleTypes.SWEEP_ATTACK, c.pos().add(d.scale(2)).add(0, 1.2, 0), 2, .2, 0); }
+                }
+                if (!aimed) tvel(c);
+                if (t >= 30 && t < 100 && t % 10 == 0) groundSpear(c, c.target.position().add(c.rnd.nextGaussian() * 2.5, 0, c.rnd.nextGaussian() * 2.5), 4, 10);
+            }
+            public void pose(Pose p, float t, UtMob m) {
+                float sh = (float) Math.sin(t * 2.3f) * .05f;
+                p.r("head", sh, 0, sh).o("body", 0, -.3f, 0).r("armL", .3f, 0, .2f);
+                for (int s : new int[]{24, 54, 84}) { float w = env(t, s - 12, s - 2, s, s + 1), th = env(t, s, s + 2, s + 4, s + 12);
+                    p.r("armR", -3f * w + 1.2f * th, 0, 0).r("body", -.2f * w + .4f * th, .5f * w - .5f * th, 0).r("legR", .4f * th, 0, 0); }
+            }
+        };
+    }
+
+    // ================================================================ DUSTTALE: Frisk (the 327th genocide; Chara at the wheel)
+    static CharacterDef dusttaleFrisk() {
+        return CharacterDef.of("dusttale_frisk", "Frisk (Dusttale)", Faction.GENOCIDE_ROUTE).att(Attitude.HOSTILE).hp(110).keep(3).rest(14).speed(.38f)
+            .egg(0x4a7fd0, 0xff2030).size(.55f, 1.3f).scale(.8f)
+            .model(new ModelDef()
+                .box("body", null, 0, 10, 0, 7, 7, 4, 0x4a7fd0)
+                .box("stripe1", "body", 0, 1.5f, -2.05f, 7.1f, 1.2f, .2f, 0xc050c0)
+                .box("stripe2", "body", 0, -1.5f, -2.05f, 7.1f, 1.2f, .2f, 0xc050c0)
+                .glow("dust1", "body", 2, -.5f, -2.15f, 1, .8f, .2f, 0xb0aaa0)
+                .box("head", "body", 0, 7.5f, 0, 7, 7, 7, 0xf2c8a0)
+                .box("hair", "head", 0, 2.6f, .6f, 7.4f, 2.4f, 7.4f, 0x5a3418)
+                .box("hairBack", "head", 0, -.6f, 3.4f, 7.4f, 5, 1, 0x5a3418)
+                .glow("eyeL", "head", -1.6f, .2f, -3.55f, 1.2f, .5f, .2f, RED)
+                .glow("eyeR", "head", 1.6f, .2f, -3.55f, 1.2f, .5f, .2f, RED)
+                .box("smile", "head", 0, -1.8f, -3.55f, 3, .5f, .2f, 0x6a1010)
+                .limb("armL", "body", -4.5f, 3, 0, 2, 6.5f, 2, 0x4a7fd0)
+                .limb("armR", "body", 4.5f, 3, 0, 2, 6.5f, 2, 0x4a7fd0)
+                .box("knife", "armR", 0, -7.5f, -1.6f, .3f, .8f, 3.6f, 0xd02020)
+                .limb("legL", null, -1.6f, 6.5f, 0, 2.5f, 6.5f, 2.6f, 0x3a5aa0)
+                .limb("legR", null, 1.6f, 6.5f, 0, 2.5f, 6.5f, 2.6f, 0x3a5aa0)
+                .box("shoeL", "legL", 0, -6.2f, -.3f, 2.7f, 1, 3.2f, 0x5a3418)
+                .box("shoeR", "legR", 0, -6.2f, -.3f, 2.7f, 1, 3.2f, 0x5a3418))
+            .attacks(friskRealKnife(), friskDustKick(), friskReset()).build();
+    }
+    /** REAL KNIFE: three red slash lines flash over you, a dash, then the three slashes land in order. */
+    static Attack friskRealKnife() {
+        return new Attack("dusttale_frisk_real_knife", 58) {
+            public void tick(AttackCtx c, int t) {
+                if (t == 4) { Vec3 d = hz(c.tpos().subtract(c.pos())); putV(c, "dfK", d); putV(c, "dfP", c.tpos()); c.sound(SoundEvents.PLAYER_ATTACK_SWEEP, .6f, .5f);
+                    for (int k = 0; k < 3; k++) p(c, c.tpos().add(0, .2 * (k - 1), 0), RED).face(d.yRot((k - 1) * .7f)).box(.1f, .1f, 3).dmg(0).life(16 + k * 6).pierce().spawn(); }
+                if (t == 16) c.dash(getV(c, "dfK").scale(1.2).add(0, .15, 0));
+                for (int k = 0; k < 3; k++) if (t == 20 + k * 6) { Vec3 d = getV(c, "dfK"), at = getV(c, "dfP").add(0, .2 * (k - 1), 0);
+                    p(c, at, RED).face(d.yRot((k - 1) * .7f)).box(.5f, .15f, 3).dmg(6).life(4).pierce().spawn();
+                    c.sound(SoundEvents.PLAYER_ATTACK_STRONG, 1, .8f + k * .1f); c.particle(ParticleTypes.SWEEP_ATTACK, at, 2, .3, 0); }
+            }
+            public void pose(Pose p, float t, UtMob m) {
+                float w = env(t, 2, 12, 16, 18); p.r("armR", -2.4f * w, .6f * w, 0).r("body", 0, .4f * w, 0).r("legL", -.5f * w, 0, 0);
+                for (int k = 0; k < 3; k++) { float s = env(t, 18 + k * 6, 20 + k * 6, 21 + k * 6, 24 + k * 6), dir = k % 2 == 0 ? 1 : -1;
+                    p.r("armR", -1.6f * s, dir * 1.4f * s, 0).r("body", 0, -dir * .5f * s, 0); }
+            }
+        };
+    }
+    /** Kicks up a cloud of monster dust (blinding), blinks behind you and stabs from inside it. */
+    static Attack friskDustKick() {
+        return new Attack("dusttale_frisk_dust_kick", 52) {
+            public void tick(AttackCtx c, int t) {
+                if (t == 8) { c.particle(dust(0x9d968c, 2f), c.tpos(), 60, 1.2, .05); eff(c, MobEffects.BLINDNESS, 40, 0); c.sound(SoundEvents.SAND_BREAK, 1, .6f); }
+                if (t == 22) tele(c, c.target.position().subtract(hz(c.target.getLookAngle()).scale(1.6)));
+                if (t == 24) { Vec3 d = hz(c.tpos().subtract(c.pos())); p(c, c.pos().add(d).add(0, .9, 0), RED).face(d).box(.3f, .3f, 2).dmg(7).warn(4).life(10).pierce().spawn(); }
+                if (t == 28) c.sound(SoundEvents.PLAYER_ATTACK_CRIT, 1, .7f);
+            }
+            public void pose(Pose p, float t, UtMob m) {
+                float kick = env(t, 2, 7, 9, 14), stab = env(t, 24, 28, 31, 40);
+                p.r("legR", -1.4f * kick, 0, 0).r("body", .2f * kick, 0, 0).r("armR", -1.6f * stab, 0, 0).r("body", .35f * stab, 0, 0);
+            }
+        };
+    }
+    /** RESET (<35%, twice per life): light gathers, the world flashes white, they reload a save and reappear somewhere else. */
+    static Attack friskReset() {
+        return new Attack("dusttale_frisk_reset", 50) {
+            public void tick(AttackCtx c, int t) {
+                if (t == 0) c.sound(SoundEvents.BEACON_POWER_SELECT, 1, 1.4f);
+                if (t < 24) c.particle(ParticleTypes.END_ROD, c.pos().add(0, .8, 0).add(ang(t * .5).scale(1.2)), 2, .05, .01);
+                if (t == 24) { CompoundTag d = c.me.getPersistentData(); d.putInt("dfReset", d.getInt("dfReset") + 1);
+                    c.me.heal(c.me.getMaxHealth() * .35f); c.particle(ParticleTypes.FLASH, c.pos().add(0, 1, 0), 1, 0, 0); eff(c, MobEffects.DARKNESS, 30, 0);
+                    c.sound(SoundEvents.PLAYER_LEVELUP, 1, .5f); tele(c, c.target.position().add(ang(c.rnd.nextDouble() * 2 * PI).scale(5))); }
+            }
+            public boolean usable(UtMob m) { return m.hpFrac() < .35f && m.getPersistentData().getInt("dfReset") < 2; }
+            public void pose(Pose p, float t, UtMob m) { float s = env(t, 0, 8, 22, 26); p.r("armL", -2.2f * s, 0, .3f * s).r("head", -.4f * s, 0, 0).o("body", 0, .4f * s, 0); }
+        };
+    }
+
     // ================================================================ LAST BREATH: Sans (phases 1, 1.5, 2, 2.5, 3, final)
     static final float P1 = .66f, P2 = .33f;
     static CharacterDef lastBreathSans() {
         int hoodie = 0x2f5fcf;
-        return CharacterDef.of("lastbreath_sans", "Last Breath Sans", Faction.UNDERGROUND).att(Attitude.HOSTILE).hp(260).boss().keep(8).rest(10).speed(.33f)
+        return CharacterDef.of("last_breath_sans", "Last Breath Sans", Faction.UNDERGROUND).att(Attitude.HOSTILE).hp(260).boss().keep(8).rest(10).speed(.33f)
             .egg(0x2f5fcf, 0x3fe8ff).size(.7f, 1.12f).scale(.92f)
             .model(new ModelDef()
                 .box("body", null, 0, 8, 0, 8.4f, 7, 5.2f, hoodie)
@@ -654,7 +949,7 @@ public final class AuDustLastBreath {
 
     /** Colorful Bones (Blue): warning box, then a blue wall marches out; a giant bone erupts under anyone standing still. */
     static Attack colorfulBlue() {
-        return new Attack("lastbreath_colorful_blue", 84) {
+        return new Attack("last_breath_colorful_blue", 84) {
             public void tick(AttackCtx c, int t) {
                 Vec3 f = hz(c.tpos().subtract(c.pos())), r = side(f);
                 if (t == 0) { deco(c, c.pos().add(f.scale(2.4)).add(0, 1, 0), f, 4, 2, .08f, 0xffe040, 12); c.sound(SoundEvents.NOTE_BLOCK_PLING.get(), 1, 1.8f); }
@@ -672,7 +967,7 @@ public final class AuDustLastBreath {
     }
     /** Colorful Bones (Orange): grey bones jut out of him, turn orange and lunge; mini bone waves trace where you run. */
     static Attack colorfulOrange() {
-        return new Attack("lastbreath_colorful_orange", 80) {
+        return new Attack("last_breath_colorful_orange", 80) {
             public void tick(AttackCtx c, int t) {
                 Vec3 pv = predict(c, 8);
                 if (t == 0) for (int k = 0; k < 8; k++) {
@@ -697,7 +992,7 @@ public final class AuDustLastBreath {
     }
     /** Spinner Ricochet: a spinner hovers over him; a blaster fires into it and the beam bounces at you. */
     static Attack spinnerRicochet() {
-        return new Attack("lastbreath_spinner_ricochet", 92) {
+        return new Attack("last_breath_spinner_ricochet", 92) {
             public void tick(AttackCtx c, int t) {
                 if (t == 0) putV(c, "lbS", c.pos().add(0, 2.8, 0));
                 Vec3 sp = getV(c, "lbS");
@@ -718,7 +1013,7 @@ public final class AuDustLastBreath {
     }
     /** Spinmarrang: an orange cross-bone flies out, marks the spot, then homes back through you. */
     static Attack spinmarrang() {
-        return new Attack("lastbreath_spinmarrang", 72) {
+        return new Attack("last_breath_spinmarrang", 72) {
             public void tick(AttackCtx c, int t) {
                 for (int s : new int[]{4, 36}) {
                     if (t == s) {
@@ -741,7 +1036,7 @@ public final class AuDustLastBreath {
     }
     /** Spin Gimmick: four blasters in a plus around you, then the plus rotated 45 degrees, then a full ring of eight. */
     static Attack spinGimmick() {
-        return new Attack("lastbreath_spin_gimmick", 92) {
+        return new Attack("last_breath_spin_gimmick", 92) {
             public void tick(AttackCtx c, int t) {
                 int[][] waves = {{0, 4, 0}, {26, 4, 1}, {52, 8, 0}};
                 for (int[] w : waves) {
@@ -760,7 +1055,7 @@ public final class AuDustLastBreath {
     }
     /** Slide Tricks: white edge lanes slide across, five blue rows drive in, then an orange two-way slider. */
     static Attack slideTricks() {
-        return new Attack("lastbreath_slide_tricks", 104) {
+        return new Attack("last_breath_slide_tricks", 104) {
             public void tick(AttackCtx c, int t) {
                 if (t == 0) { putV(c, "lbF", hz(c.tpos().subtract(c.pos()))); putV(c, "lbC", c.target.position()); c.sound(SoundEvents.NOTE_BLOCK_BELL.get(), 1, 1.2f); }
                 Vec3 f = getV(c, "lbF"), r = side(f), ctr = getV(c, "lbC");
@@ -785,7 +1080,7 @@ public final class AuDustLastBreath {
     }
     /** Blink Dilation: short blink (leaving a blaster behind), a bone drops on you and ripples out in rings. */
     static Attack blinkDilation() {
-        return new Attack("lastbreath_blink_dilation", 84) {
+        return new Attack("last_breath_blink_dilation", 84) {
             public void tick(AttackCtx c, int t) {
                 if (t == 6) {
                     Vec3 old = c.pos().add(0, 1.6, 0); tele(c, c.target.position().add(ang(c.rnd.nextDouble() * 2 * PI).scale(5.5)));
@@ -807,7 +1102,7 @@ public final class AuDustLastBreath {
     }
     // ---- phase 1.5: Artifact Frenzy (the Annoying Dog)
     static Attack dogPile() {
-        return new Attack("lastbreath_dog_pile", 84) {
+        return new Attack("last_breath_dog_pile", 84) {
             public void tick(AttackCtx c, int t) {
                 for (int k = 0; k < 3; k++) {
                     int s = k * 20;
@@ -823,7 +1118,7 @@ public final class AuDustLastBreath {
         };
     }
     static Attack barkshot() {
-        return new Attack("lastbreath_barkshot", 74) {
+        return new Attack("last_breath_barkshot", 74) {
             public void tick(AttackCtx c, int t) {
                 for (int s : new int[]{0, 36}) {
                     Vec3 at = c.pos().add(c.right().scale(s == 0 ? 1.6 : -1.6)).add(0, 1.9, 0);
@@ -840,7 +1135,7 @@ public final class AuDustLastBreath {
         };
     }
     static Attack bungeeBones() {
-        return new Attack("lastbreath_bungee_bones", 76) {
+        return new Attack("last_breath_bungee_bones", 76) {
             public void tick(AttackCtx c, int t) {
                 for (int s : new int[]{0, 34}) {
                     if (t == s) {
@@ -861,7 +1156,7 @@ public final class AuDustLastBreath {
     }
     // ---- phase 2
     static Attack aggressiveColors() {
-        return new Attack("lastbreath_aggressive_colors", 92) {
+        return new Attack("last_breath_aggressive_colors", 92) {
             public void tick(AttackCtx c, int t) {
                 if (t < 40 && t % 8 == 0) {
                     Vec3 r = side(c.tpos().subtract(c.pos())); int s = (t / 8) % 2 == 0 ? 1 : -1; Vec3 at = c.tpos().add(r.scale(s * 7));
@@ -882,7 +1177,7 @@ public final class AuDustLastBreath {
         };
     }
     static Attack suddenWaves() {
-        return new Attack("lastbreath_sudden_waves", 96) {
+        return new Attack("last_breath_sudden_waves", 96) {
             public void tick(AttackCtx c, int t) {
                 for (int w = 0; w < 4; w++) {
                     int s = w * 20, dt = t - s;
@@ -902,7 +1197,7 @@ public final class AuDustLastBreath {
         };
     }
     static Attack unexpectedAssist() {
-        return new Attack("lastbreath_unexpected_assist", 76) {
+        return new Attack("last_breath_unexpected_assist", 76) {
             public void tick(AttackCtx c, int t) {
                 for (int s : new int[]{0, 36}) {
                     if (t == s) { putV(c, "lbU", c.target.position()); double rot = s == 0 ? 0 : PI / 3;
@@ -921,7 +1216,7 @@ public final class AuDustLastBreath {
         };
     }
     static Attack shiftingBlink() {
-        return new Attack("lastbreath_shifting_blink", 84) {
+        return new Attack("last_breath_shifting_blink", 84) {
             public void tick(AttackCtx c, int t) {
                 if (t == 8) {
                     Vec3 old = c.pos().add(0, 1.6, 0), f = hz(c.tpos().subtract(c.pos()));
@@ -939,7 +1234,7 @@ public final class AuDustLastBreath {
         };
     }
     static Attack vengefulSlash() {
-        return new Attack("lastbreath_vengeful_slash", 62) {
+        return new Attack("last_breath_vengeful_slash", 62) {
             public void tick(AttackCtx c, int t) {
                 c.face(c.tpos());
                 if (t < 24 && t % 2 == 0) { double rad = 2.6 - t * .08; for (int k = 0; k < 8; k++) c.particle(ParticleTypes.END_ROD, c.pos().add(ang(k * PI / 4 + t * .2).scale(rad)).add(0, 1, 0), 1, 0, 0);
@@ -958,7 +1253,7 @@ public final class AuDustLastBreath {
         };
     }
     static Attack forcefulCounter() {
-        return new Attack("lastbreath_forceful_counter", 82) {
+        return new Attack("last_breath_forceful_counter", 82) {
             public void tick(AttackCtx c, int t) {
                 if (t == 0) { Vec3 at = c.pos().add(0, 2.8, 0), f = c.fwd(); deco(c, at, f, .5f, .45f, .2f, 0x3fa7ff, 72);
                     deco(c, at.add(0, -.3, 0), f, .28f, .3f, .2f, 0x3fa7ff, 72); c.sound(SoundEvents.AMETHYST_BLOCK_RESONATE, 1, 1.4f); }
@@ -974,7 +1269,7 @@ public final class AuDustLastBreath {
     }
     /** Screen manipulation: the world "turns" (nausea) as gravity rotates right, up, left, down with homing blasters. */
     static Attack screenTwist() {
-        return new Attack("lastbreath_screen_twist", 104) {
+        return new Attack("last_breath_screen_twist", 104) {
             public void tick(AttackCtx c, int t) {
                 if (t == 0) { eff(c, MobEffects.CONFUSION, 120, 0); c.sound(SoundEvents.PORTAL_TRIGGER, .5f, 1.8f); }
                 Vec3 r = side(c.tpos().subtract(c.pos()));
@@ -997,7 +1292,7 @@ public final class AuDustLastBreath {
         };
     }
     static Attack slidingLegacy() {
-        return new Attack("lastbreath_sliding_legacy", 104) {
+        return new Attack("last_breath_sliding_legacy", 104) {
             public void tick(AttackCtx c, int t) {
                 if (t == 0) { putV(c, "lbF", hz(c.tpos().subtract(c.pos()))); putV(c, "lbC", c.pos()); }
                 Vec3 f = getV(c, "lbF"), r = side(f), me = getV(c, "lbC");
@@ -1014,7 +1309,7 @@ public final class AuDustLastBreath {
     }
     // ---- phase 2.5: Struggle
     static Attack struggleBones() {
-        return new Attack("lastbreath_struggle_bones", 74) {
+        return new Attack("last_breath_struggle_bones", 74) {
             public void tick(AttackCtx c, int t) {
                 if (t % 9 == 0 && t < 64) { Vec3 r = side(c.tpos().subtract(c.pos())); Vec3 at = c.tpos().add(r.scale(((t / 9) % 2 == 0 ? 1 : -1) * 6.5));
                     lance(c, at, c.aim(at).scale(.9), 1.8f, W, 5, 6, 18); }
@@ -1028,7 +1323,7 @@ public final class AuDustLastBreath {
         };
     }
     static Attack struggleClones() {
-        return new Attack("lastbreath_struggle_clones", 84) {
+        return new Attack("last_breath_struggle_clones", 84) {
             public void tick(AttackCtx c, int t) {
                 Vec3 r = side(c.tpos().subtract(c.pos()));
                 for (int k = 0; k < 3; k++) {
@@ -1046,7 +1341,7 @@ public final class AuDustLastBreath {
     }
     // ---- phase 3: W.D. Gaster's possession
     static Attack gasterHands() {
-        return new Attack("lastbreath_gaster_hands", 104) {
+        return new Attack("last_breath_gaster_hands", 104) {
             public void tick(AttackCtx c, int t) {
                 if (t == 0) {
                     Vec3 r = side(c.tpos().subtract(c.pos()));
@@ -1065,7 +1360,7 @@ public final class AuDustLastBreath {
         };
     }
     static Attack crackedBlasters() {
-        return new Attack("lastbreath_cracked_blasters", 112) {
+        return new Attack("last_breath_cracked_blasters", 112) {
             public void tick(AttackCtx c, int t) {
                 if (t < 60 && t % 5 == 0) {
                     int k = t / 5; Vec3 at = c.tpos().add(ang(k * PI / 6).scale(7)).add(0, 1 + k * .25, 0);
@@ -1081,7 +1376,7 @@ public final class AuDustLastBreath {
         };
     }
     static Attack wingdingRain() {
-        return new Attack("lastbreath_wingding_rain", 94) {
+        return new Attack("last_breath_wingding_rain", 94) {
             public void tick(AttackCtx c, int t) {
                 if (t % 20 == 0) { eff(c, MobEffects.DARKNESS, 12, 0); c.sound(SoundEvents.SCULK_CLICKING, 1, .5f); }
                 if (t == 0) eff(c, MobEffects.CONFUSION, 90, 0);
@@ -1099,7 +1394,7 @@ public final class AuDustLastBreath {
     }
     /** Gaster's cracked face opens over the arena; rings of wingdings collapse inward with a rotating gap. */
     static Attack gasterRift() {
-        return new Attack("lastbreath_gaster_rift", 104) {
+        return new Attack("last_breath_gaster_rift", 104) {
             public void tick(AttackCtx c, int t) {
                 if (t == 0) {
                     Vec3 at = c.target.position().add(0, 6.5, 0), f = hz(c.pos().subtract(at)); putV(c, "lbR", c.target.position());
@@ -1123,7 +1418,7 @@ public final class AuDustLastBreath {
     }
     /** Final attack (below 12%): gravity spam in every direction into bone walls, until he runs out of strength. */
     static Attack lastGravity() {
-        return new Attack("lastbreath_last_gravity", 150) {
+        return new Attack("last_breath_last_gravity", 150) {
             public void tick(AttackCtx c, int t) {
                 if (t == 0) { c.sound(SoundEvents.BEACON_DEACTIVATE, 1, .5f); eff(c, MobEffects.CONFUSION, 140, 0); }
                 if (t >= 8 && t < 124 && (t - 8) % 9 == 0) {
@@ -1144,7 +1439,7 @@ public final class AuDustLastBreath {
         };
     }
 
-    // ================================================================ DISBELIEF: Papyrus (in Sans's hoodie)
+    // ================================================================ shared Papyrus body (Dusttale Papyrus, Dust Papyrus)
     static ModelDef papyrusModel(int hoodie, int scarf, int eye, int boots, int dustSpecks) {
         ModelDef m = new ModelDef()
             .box("body", null, 0, 17, 0, 7, 9, 4.6f, hoodie)
@@ -1175,131 +1470,6 @@ public final class AuDustLastBreath {
             .glow("dust3", "legR", .5f, -6, -1.45f, .8f, .8f, .2f, dustSpecks).box("tear", "scarf", 2.8f, -.6f, -2.6f, 1.6f, 1.2f, .4f, 0x3a0a0a);
         return m;
     }
-    static CharacterDef disbeliefPapyrus() {
-        return CharacterDef.of("disbelief_papyrus", "Disbelief Papyrus", Faction.UNDERGROUND).att(Attitude.HOSTILE).hp(240).boss().keep(7).rest(12).speed(.3f)
-            .egg(0x3a6fe0, 0xff8a1a).size(.7f, 2.3f)
-            .model(papyrusModel(0x3a6fe0, 0xd42a2a, ORANGE_EYE, 0xc23030, 0))
-            .attacks(ph(.7f, 1, boneWall()), ph(.4f, 1, boneToss()), ph(.7f, 1, blueSoul()),
-                ph(0, .7f, papBlasters()), ph(.15f, .7f, hoodieRage()), ph(0, .4f, brotherEcho()), ph(.4f, 1, coolDudeBone()),
-                ph(0, .15f, finalDisbelief()))
-            .build();
-    }
-    /** Papyrus-style walls: alternating short (jump) and tall blue bones slide in from the sides. */
-    static Attack boneWall() {
-        return new Attack("disbelief_bone_wall", 76) {
-            public void tick(AttackCtx c, int t) {
-                if (t < 60 && t % 12 == 0) {
-                    Vec3 f = hz(c.tpos().subtract(c.pos())), r = side(f); int s = (t / 12) % 2 == 0 ? 1 : -1; boolean tall = (t / 12) % 2 == 1;
-                    for (int k = -3; k <= 3; k++) post(c, c.target.position().add(r.scale(s * 7)).add(f.scale(k * .8)).add(0, tall ? 1.2 : .35, 0), r.scale(-s * .45), tall ? 2.4f : .7f, tall ? BL : W, 5, 6, 34);
-                    c.sound(SoundEvents.SKELETON_SHOOT, .8f, .8f);
-                }
-            }
-            public void pose(Pose p, float t, UtMob m) { for (int k = 0; k < 5; k++) { float u = pulse(t, k * 12 + 2); p.r(k % 2 == 0 ? "armR" : "armL", -1.6f * u, 0, (k % 2 == 0 ? -.8f : .8f) * u); } p.r("head", -.1f, 0, 0); }
-        };
-    }
-    static Attack boneToss() {
-        return new Attack("disbelief_bone_toss", 64) {
-            public void tick(AttackCtx c, int t) {
-                for (int k = 0; k < 4; k++) if (t == 10 + k * 11) {
-                    Vec3 at = c.pos().add(c.right().scale(k % 2 == 0 ? .5 : -.5)).add(0, 2.4, 0), aim = predict(c, 8).add(0, 1, 0).subtract(at).normalize();
-                    lance(c, at, aim.scale(1.0), 2.4f, k == 3 ? OR : W, 6, 3, 26); c.sound(SoundEvents.TRIDENT_THROW, 1, .8f);
-                } else tvel(c);
-            }
-            public void pose(Pose p, float t, UtMob m) { for (int k = 0; k < 4; k++) { String a = k % 2 == 0 ? "armR" : "armL"; float w = env(t, k * 11, k * 11 + 8, k * 11 + 9, k * 11 + 11), th = env(t, k * 11 + 9, k * 11 + 11, k * 11 + 12, k * 11 + 16);
-                p.r(a, -2.6f * w - 1.0f * th, 0, 0).r("body", 0, (k % 2 == 0 ? .3f : -.3f) * w, 0); } }
-        };
-    }
-    static Attack blueSoul() {
-        return new Attack("disbelief_blue_soul", 84) {
-            public void tick(AttackCtx c, int t) {
-                if (t == 6) { yank(c, new Vec3(0, -1.8, 0)); c.sound(SoundEvents.ANVIL_LAND, 1, .6f); c.particle(dust(0x3fa7ff, 1.6f), c.tpos(), 20, .4, .05); }
-                if (t >= 14 && t < 70 && (t - 14) % 7 == 0) {
-                    int k = (t - 14) / 7; Vec3 f = hz(c.tpos().subtract(c.pos())), r = side(f);
-                    for (int j = -2; j <= 2; j++) spike(c, c.pos().add(f.scale(1.5 + k * 1.1)).add(r.scale(j * .8)), j == 0 ? .6f : 1.5f, j == 0 ? W : BL, 4, 4, 6);
-                    c.sound(SoundEvents.BONE_BLOCK_PLACE, .8f, 1 + k * .05f);
-                }
-            }
-            public void pose(Pose p, float t, UtMob m) { float s = env(t, 0, 6, 10, 20); p.r("armR", -2.6f * s + 1.8f * ramp(t, 4, 7) * s, 0, 0).r("head", .3f * s, 0, 0); }
-        };
-    }
-    static Attack coolDudeBone() {
-        return new Attack("disbelief_cool_dude_bone", 70) {
-            public void tick(AttackCtx c, int t) {
-                if (t == 0) { c.sound(SoundEvents.NOTE_BLOCK_DIDGERIDOO.get(), 1, .6f); }
-                if (t == 14) {
-                    Vec3 f = hz(c.tpos().subtract(c.pos())), r = side(f), at = c.pos().add(f.scale(2)).add(0, .9, 0);
-                    bar(c, at, f.scale(.6), 7, W, 7, 10, 40); bar(c, at.add(r.scale(3.7)), f.scale(.6), .7f, W, 0, 10, 40); bar(c, at.add(r.scale(-3.7)), f.scale(.6), .7f, W, 0, 10, 40);
-                    c.sound(SoundEvents.ANVIL_PLACE, .8f, .5f);
-                }
-                if (t == 40) dog(c, c.pos().add(c.fwd().scale(2)).add(0, .3, 0), c.fwd().scale(.5), 0, 28, 3);
-            }
-            public void pose(Pose p, float t, UtMob m) { float s = env(t, 0, 10, 16, 24); p.r("armL", -2.8f * s, 0, .4f * s).r("armR", -2.8f * s, 0, -.4f * s).r("head", -.3f * s, 0, 0); }
-        };
-    }
-    static Attack papBlasters() {
-        return new Attack("disbelief_blasters", 96) {
-            public void tick(AttackCtx c, int t) {
-                int[][] waves = {{0, 3}, {28, 5}, {56, 2}};
-                for (int[] w : waves) {
-                    if (t == w[0]) { double base = angOf(c.pos().subtract(c.tpos()));
-                        for (int k = 0; k < w[1]; k++) { double a = base + (k - (w[1] - 1) / 2.0) * .7;
-                            gb(c, c.tpos().add(ang(a).scale(6)).add(0, 1.6, 0), c.tpos(), 18, 10, w[1] == 2 ? 9 : 6, w[1] == 2 ? 2f : 1f, 14, 0xf0f0f0, ORANGE_EYE, 0xffd0a0); } }
-                    if (t == w[0] + 18) boom(c, c.tpos());
-                }
-            }
-            public void pose(Pose p, float t, UtMob m) { for (int s : new int[]{0, 28, 56}) { float u = env(t, s, s + 4, s + 14, s + 20); p.r("armR", -2.7f * u, 0, -.3f * u).r("armL", -1.0f * u, 0, .9f * u); } }
-        };
-    }
-    static Attack hoodieRage() {
-        return new Attack("disbelief_hoodie_rage", 80) {
-            public void tick(AttackCtx c, int t) {
-                c.face(c.tpos());
-                for (int s : new int[]{6, 28, 50}) {
-                    if (t == s) { Vec3 d = hz(c.tpos().subtract(c.pos())); putV(c, "dbR", d); beam(c, c.pos().add(0, 1, 0), d, 6, .1f, ORANGE_EYE, 10, 1, 0); }
-                    if (t == s + 10) c.dash(getV(c, "dbR").scale(1.4).add(0, .15, 0));
-                    if (t == s + 13) { Vec3 d = getV(c, "dbR"), at = c.pos().add(d.scale(1.6)).add(0, 1.3, 0);
-                        p(c, at, W).face(d).box(3.6f, .3f, 1.6f).dmg(8).life(5).pierce().spawn(); p(c, at, ORANGE_EYE).face(d).box(.3f, 3.0f, 1.2f).dmg(0).life(4).pierce().spawn();
-                        c.sound(SoundEvents.PLAYER_ATTACK_STRONG, 1, .6f); c.particle(ParticleTypes.SWEEP_ATTACK, at, 3, .6, 0); }
-                }
-            }
-            public void pose(Pose p, float t, UtMob m) { for (int s : new int[]{6, 28, 50}) { float b = env(t, s, s + 8, s + 10, s + 12), sw = env(t, s + 10, s + 13, s + 15, s + 20);
-                p.r("armR", -2.8f * b - .4f * sw, 0, -.3f * b).r("armL", -2.8f * b - .4f * sw, 0, .3f * b).r("body", .4f * sw - .2f * b, 0, 0); } }
-        };
-    }
-    /** Phase 3: a phantom of Sans stands behind him; together they fire a blaster ring while bone gaps close in. */
-    static Attack brotherEcho() {
-        return new Attack("disbelief_brother_echo", 104) {
-            public void tick(AttackCtx c, int t) {
-                if (t == 0) { Vec3 at = c.pos().add(c.fwd().scale(-1.6)).add(c.right().scale(1.2)); ghostSans(c, at, c.fwd(), 96, 0x3a6fe0, CYAN);
-                    c.particle(ParticleTypes.SOUL, at.add(0, 1, 0), 20, .4, .03); c.sound(SoundEvents.SOUL_ESCAPE, 1, .7f); }
-                if (t == 14 || t == 50) for (int k = 0; k < 6; k++) { double a = k * PI / 3 + (t == 50 ? PI / 6 : 0);
-                    gb(c, c.tpos().add(ang(a).scale(6.5)).add(0, 1.4, 0), c.tpos(), 20, 9, 6, .9f, 14, 0xf0f0f0, t == 14 ? CYAN : ORANGE_EYE, W); }
-                if (t == 34 || t == 70) boom(c, c.tpos());
-                if (t >= 20 && t < 96 && t % 16 == 4) {
-                    Vec3 f = hz(c.tpos().subtract(c.pos())), r = side(f); int gap = c.rnd.nextInt(5) - 2;
-                    for (int s = -1; s <= 1; s += 2) for (int k = -3; k <= 3; k++) { if (Math.abs(k - gap) <= 1) continue;
-                        post(c, c.target.position().add(r.scale(s * 7)).add(f.scale(k * .8)).add(0, 1, 0), r.scale(-s * .55), 2.0f, W, 4, 8, 28); }
-                }
-            }
-            public void pose(Pose p, float t, UtMob m) { float s = ramp(t, 0, 10) * (1 - ramp(t, 96, 104)); p.r("armL", -1.0f * s, 0, .3f * s).r("armR", -1.0f * s, 0, -.3f * s).o("body", 0, (float) Math.sin(t * .6f) * .4f * s, 0).r("head", .1f * s, 0, 0); }
-        };
-    }
-    /** Phase 4: his eye blazes; a rotating ring of blasters fires one after another while bones rain. */
-    static Attack finalDisbelief() {
-        return new Attack("disbelief_final", 140) {
-            public void tick(AttackCtx c, int t) {
-                if (t == 0) { c.sound(SoundEvents.WITHER_SPAWN, .5f, 1.3f); c.particle(dust(ORANGE_EYE, 2.5f), c.eye(), 40, .4, .1); }
-                if (t >= 10 && t < 100 && t % 6 == 4) { int k = (t - 10) / 6; double a = k * .55;
-                    gb(c, c.tpos().add(ang(a).scale(6.5)).add(0, 1.2 + (k % 3) * .7, 0), c.tpos(), 16, 8, 6, 1.0f, 14, 0xf0f0f0, ORANGE_EYE, 0xffd0a0); }
-                if (t >= 26 && t < 116 && t % 6 == 2) boom(c, c.tpos());
-                if (t >= 20 && t < 120 && t % 3 == 0) lance(c, c.target.position().add(c.rnd.nextGaussian() * 3, 8, c.rnd.nextGaussian() * 3), new Vec3(0, -.8, 0), 1.6f, t % 9 == 0 ? OR : W, 4, 4, 14);
-                if (t == 60 || t == 100) eff(c, MobEffects.WITHER, 30, 0);
-            }
-            public void pose(Pose p, float t, UtMob m) { float s = ramp(t, 0, 10) * (1 - ramp(t, 128, 140)), sh = (float) Math.sin(t * 2.1f);
-                p.r("armL", -2.2f * s, 0, .9f * s).r("armR", -2.2f * s, 0, -.9f * s).r("head", -.3f * s, sh * .05f * s, 0).o("body", sh * .2f * s, .6f * s, 0); }
-        };
-    }
-
     // ================================================================ DUSTBELIEF: Dust Papyrus (Papyrus who took the LV, haunted by Phantom Sans)
     static CharacterDef dustbeliefPapyrus() {
         return CharacterDef.of("dustbelief_papyrus", "Dust Papyrus", Faction.GENOCIDE_ROUTE).att(Attitude.HOSTILE).hp(220).boss().keep(7).rest(12).speed(.32f)
