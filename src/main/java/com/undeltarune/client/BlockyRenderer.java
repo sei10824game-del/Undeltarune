@@ -20,18 +20,26 @@ import java.util.*;
 /** Renders a CharacterDef's box model as a part tree with idle/walk/head-look + per-attack Pose. */
 public class BlockyRenderer extends EntityRenderer<UtMob> {
     public static final ResourceLocation WHITE = new ResourceLocation(Undeltarune.ID, "textures/entity/white.png");
+    private final float fit, bottom;
     private final CharacterDef def; private final Map<String, List<Part>> kids = new HashMap<>();
 
     public BlockyRenderer(EntityRendererProvider.Context c, CharacterDef d) {
         super(c); def = d; shadowRadius = d.width() * .5f * d.scale();
         for (Part p : d.model().parts) kids.computeIfAbsent(p.parent() == null ? "" : p.parent(), k -> new ArrayList<>()).add(p);
+        // rest-pose extent (ignores rotation): sit the model on the ground and fit it to the hitbox height
+        float lo = 1e9f, hi = -1e9f; Map<String, Float> abs = new HashMap<>();
+        for (Part p : d.model().parts) {
+            float y = (p.parent() == null ? 0 : abs.getOrDefault(p.parent(), 0f)) + p.py(); abs.put(p.name(), y);
+            lo = Math.min(lo, p.hang() ? y : y - p.h() / 2); hi = Math.max(hi, p.hang() ? y + p.h() : y + p.h() / 2);
+        }
+        bottom = hi; fit = hi > lo ? d.height() * 16 / (hi - lo) : 1;
     }
     @Override public ResourceLocation getTextureLocation(UtMob e) { return WHITE; }
 
     @Override public void render(UtMob e, float yaw, float pt, PoseStack ps, MultiBufferSource buf, int light) {
         ps.pushPose();
         ps.mulPose(Axis.YP.rotationDegrees(180 - Mth.rotLerp(pt, e.yBodyRotO, e.yBodyRot)));
-        ps.scale(def.scale(), def.scale(), def.scale()); ps.scale(-1, -1, 1); ps.translate(0, -1.501, 0);
+        ps.scale(def.scale() * fit, def.scale() * fit, def.scale() * fit); ps.scale(-1, -1, 1); ps.translate(0, -bottom / 16, 0);
         Pose pose = new Pose();
         float walk = e.walkAnimation.position(pt), amp = e.walkAnimation.speed(pt), age = e.tickCount + pt;
         pose.r("armL", Mth.cos(walk * .66f) * amp, 0, 0).r("armR", -Mth.cos(walk * .66f) * amp, 0, 0)

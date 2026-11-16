@@ -53,7 +53,7 @@ public class UtProjectile extends Entity {
         Entity own = ownerId >= 0 ? level().getEntity(ownerId) : null;
         float r = Math.max(w(), Math.max(h(), l())) * .5f + 1;
         for (LivingEntity e : level().getEntitiesOfClass(LivingEntity.class, new AABB(position(), position()).inflate(r))) {
-            if (e == own || (own instanceof UtMob m && !m.isFoe(e)) || (!pierce && !hit.isEmpty()) || hit.contains(e.getId())) continue;
+            if (e == own || (own instanceof UtMob m && sparesAlly(m, e)) || (!pierce && !hit.isEmpty()) || hit.contains(e.getId())) continue;
             if (!overlaps(e)) continue;
             if (mode == BLUE && !moved(e)) continue;
             if (mode == ORANGE && moved(e)) continue;
@@ -61,6 +61,12 @@ public class UtProjectile extends Entity {
             e.hurt(own instanceof LivingEntity o ? damageSources().mobAttack(o) : damageSources().magic(), dmg);
             if (!pierce) { discard(); return; }
         }
+    }
+    /** Hits everything except the owner, same-faction allies and players the owner is friendly to. */
+    private static boolean sparesAlly(UtMob m, LivingEntity e) {
+        if (e instanceof UtMob o) return o.def.faction() == m.def.faction() && !m.isFoe(e);
+        if (e instanceof net.minecraft.world.entity.player.Player p) return m.def.toPlayer() != com.undeltarune.def.CharacterDef.Attitude.HOSTILE || p.isCreative() || p.isSpectator();
+        return false;
     }
     private static boolean moved(LivingEntity e) { return e.getDeltaMovement().horizontalDistanceSqr() > 1e-3 || Math.abs(e.getDeltaMovement().y) > .08; }
     /** OBB test: transform victim center into the projectile's local frame. */

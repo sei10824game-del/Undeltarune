@@ -91,6 +91,16 @@ public class UtMob extends PathfinderMob {
             entityData.set(ATK, pick); entityData.set(ATK_T, 0);
         }
     }
+    /** Sans-type characters dodge most damage (canon), blinking aside; void/creative damage still lands. */
+    @Override public boolean hurt(net.minecraft.world.damagesource.DamageSource src, float amt) {
+        if (!level().isClientSide && def.id().endsWith("sans") && !def.id().equals("underswap_sans") && !src.is(net.minecraft.tags.DamageTypeTags.BYPASSES_INVULNERABILITY)
+            && random.nextFloat() < .8f) {
+            double a = random.nextDouble() * Math.PI * 2;
+            randomTeleport(getX() + Math.cos(a) * 3, getY(), getZ() + Math.sin(a) * 3, true);
+            return false;
+        }
+        return super.hurt(src, amt);
+    }
     private void endAtk() { entityData.set(ATK, -1); entityData.set(ATK_T, 0); rest = def.rest(); }
 
     @Override public void startSeenByPlayer(ServerPlayer p) { super.startSeenByPlayer(p); if (bar != null) bar.addPlayer(p); }
