@@ -4,3 +4,4 @@ run/
 *.log
 .idea/
 eclipse/
+.claude/
