@@ -68,7 +68,7 @@ public final class UtMisc {
 
     // ============================== ANNOYING DOG ==============================
     static void dog(List<CharacterDef> out) {
-        out.add(CharacterDef.of("annoying_dog", "Annoying Dog", Faction.NEUTRAL).att(Attitude.NEUTRAL).hp(999).keep(3).speed(.35f).rest(40).egg(0xffffff, 0x222222).size(.5f, .5f)
+        out.add(CharacterDef.of("annoying_dog_misc", "Annoying Dog", Faction.NEUTRAL).att(Attitude.NEUTRAL).hp(999).keep(3).speed(.35f).rest(40).egg(0xffffff, 0x222222).size(.5f, .5f)
             .model(new ModelDef()
                 .box("body", null, 0, 4, 0, 5, 4, 8, 0xffffff)
                 .box("head", "body", 0, 3, -4.5f, 5, 4, 4, 0xffffff).box("snout", "head", 0, -.8f, -2.4f, 3, 2, 2, 0xffffff).box("nose", "snout", 0, .5f, -1.1f, 1, .8f, .3f, 0x111111)
@@ -100,7 +100,7 @@ public final class UtMisc {
     static void secrets(List<CharacterDef> out) {
         int pink = 0xff8fc8, cotton = 0xf2e4d8;
         // Mad Mew Mew: Mad Dummy possessing the Mew Mew Kissie Cutie doll (Switch secret boss).
-        out.add(CharacterDef.of("mad_mew_mew", "Mad Mew Mew", Faction.UNDERGROUND).hp(260).boss().keep(6).rest(14).speed(.3f).egg(0xff8fc8, 0xffffff).size(.8f, 1.6f)
+        out.add(CharacterDef.of("mad_mew_mew_misc", "Mad Mew Mew", Faction.UNDERGROUND).hp(260).boss().keep(6).rest(14).speed(.3f).egg(0xff8fc8, 0xffffff).size(.8f, 1.6f)
             .model(new ModelDef()
                 .box("body", null, 0, 10, 0, 7, 8, 5, pink).box("skirt", "body", 0, -4.5f, 0, 9, 2, 7, 0xffffff)
                 .box("head", "body", 0, 8, 0, 9, 8, 7, cotton)
@@ -139,7 +139,7 @@ public final class UtMisc {
             .build());
 
         // Glyde: secret Snowdin enemy; a smug winged beast. Swoops and feather-darts.
-        out.add(CharacterDef.of("glyde", "Glyde", Faction.UNDERGROUND).hp(220).keep(6).speed(.35f).egg(0xd0d8f8, 0xe060a0).size(1.4f, 1.4f)
+        out.add(CharacterDef.of("glyde_misc", "Glyde", Faction.UNDERGROUND).hp(220).keep(6).speed(.35f).egg(0xd0d8f8, 0xe060a0).size(1.4f, 1.4f)
             .model(new ModelDef()
                 .box("body", null, 0, 12, 0, 10, 6, 6, 0xd0d8f8)
                 .box("head", "body", 0, 4, -2, 6, 5, 5, 0xd0d8f8).box("smirk", "head", 1, -1.2f, -2.6f, 3, .5f, .2f, 0x303060)
@@ -161,7 +161,7 @@ public final class UtMisc {
             .build());
 
         // So Sorry: the apologetic artist secret enemy (Hotland, 10/10 at 8pm). Doodles that attack.
-        out.add(CharacterDef.of("so_sorry", "So Sorry", Faction.UNDERGROUND).att(Attitude.NEUTRAL).hp(160).keep(6).speed(.28f).egg(0x7a3a8a, 0xffe060).size(.8f, 1.8f)
+        out.add(CharacterDef.of("so_sorry_misc", "So Sorry", Faction.UNDERGROUND).att(Attitude.NEUTRAL).hp(160).keep(6).speed(.28f).egg(0x7a3a8a, 0xffe060).size(.8f, 1.8f)
             .model(new ModelDef()
                 .box("body", null, 0, 11, 0, 8, 10, 6, 0x7a3a8a)
                 .box("head", "body", 0, 8, -1, 7, 6, 6, 0x8a4a9a).box("mouth", "head", 0, -1.5f, -3.1f, 3, 1, .2f, 0x2a0a2a)
@@ -255,7 +255,7 @@ public final class UtMisc {
 
     // ============================== NAPSTABLOOK ==============================
     static void blook(List<CharacterDef> out) {
-        out.add(CharacterDef.of("napstablook", "Napstablook", Faction.UNDERGROUND).att(Attitude.NEUTRAL).hp(88).keep(6).speed(.15f).egg(0xf0f0f0, 0x60a0ff).size(.8f, 1.6f)
+        out.add(CharacterDef.of("napstablook_misc", "Napstablook", Faction.UNDERGROUND).att(Attitude.NEUTRAL).hp(88).keep(6).speed(.15f).egg(0xf0f0f0, 0x60a0ff).size(.8f, 1.6f)
             .model(new ModelDef()
                 .ghost("body", null, 0, 12, 0, 10, 16, 8, 0xf0f0f0, .8f)
                 .ghost("head", "body", 0, 5, -.5f, 9, 5, 7, 0xf4f4f4, .8f)

@@ -135,7 +135,7 @@ public final class UtRuinsSnowdin {
                 .limb("legL", null, -1.2f, 6, 0, 1.2f, 6, 1.2f, 0x6a3ca2).limb("legR", null, 1.2f, 6, 0, 1.2f, 6, 1.2f, 0x6a3ca2))
             .attacks(roachRise(), flySwarm("migosp_fly_swarm", m -> m.getRandom().nextFloat() < .1f), lonelyDance()).build());
 
-        out.add(CharacterDef.of("napstablook", "Napstablook", Faction.UNDERGROUND).att(Attitude.NEUTRAL).hp(40).keep(6).rest(30).speed(.18f)
+        out.add(CharacterDef.of("ruins_napstablook", "Napstablook", Faction.UNDERGROUND).att(Attitude.NEUTRAL).hp(40).keep(6).rest(30).speed(.18f)
             .egg(0xf0f0f0, 0x7fd0ff).size(.7f, 1.3f).scale(.9f)
             .model(new ModelDef()
                 .ghost("body", null, 0, 9, 0, 10, 12, 6, 0xf0f0f0, .8f)
