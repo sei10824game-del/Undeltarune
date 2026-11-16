@@ -91,7 +91,7 @@ public final class AuUnderswapSwapfell {
                      spearBarrage("captains_resolve", .35f, 0x5ff0ff, 5)).build());
 
         // Undyne: shy Royal Scientist (Alphys's role) who secretly runs the rebellion; built Napstaton.
-        out.add(CharacterDef.of("underswap_undyne", "Undyne", Faction.ROYAL_SCIENCE).att(Attitude.NEUTRAL).hp(130).boss()
+        out.add(CharacterDef.of("underswap_undyne", "Undyne", Faction.ROYAL_SCIENCE).att(Attitude.NEUTRAL).foes(Faction.ROYAL_GUARD).hp(130).boss()
             .keep(8).rest(18).speed(.28f).egg(0x4aa3d8, 0xf0f0f0).size(.7f, 1.9f)
             .model(fish(0x4aa3d8, 0xd8262b, 0xf0f0f0, 0x3a3f55, 0xccf0ff, false))
             .attacks(drones("lab_drones", 0x9aa3b5, 0xff4040, 4),

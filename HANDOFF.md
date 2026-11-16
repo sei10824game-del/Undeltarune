@@ -11,6 +11,6 @@ None open (Ch4, Ch5, Dusttale, Ruins Hard Mode, Ch2, UTY filled/audited). Not ru
 
 ## Known issues
 - Duplicate character ids fixed (UtMisc *_misc, ruins_napstablook). Attack ids repeat per-character only (fine).
-- Faction: ROYAL_GUARD vs ROYAL_SCIENCE hostility removed (canon). AU-specific feuds (e.g. Underswap Undyne rebellion) need a per-character enemy override (not built).
+- Faction: per-character one-way enemy override exists: `CharacterDef.Builder.foes(Faction...)` (used by underswap_undyne vs ROYAL_GUARD); add to other AU feuds as needed.
 - Visuals are procedural box models only (no textures/sounds assets).
 - Worktrees under `.claude/` (git-ignored) hold old agent branches `worktree-agent-*`; all merged.

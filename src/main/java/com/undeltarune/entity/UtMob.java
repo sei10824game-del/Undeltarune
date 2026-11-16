@@ -69,7 +69,7 @@ public class UtMob extends PathfinderMob {
     /** Canon hostility: players by Attitude, other characters by Faction. */
     public boolean isFoe(LivingEntity e) {
         if (e instanceof Player p) return def.toPlayer() == Attitude.HOSTILE && !p.isCreative() && !p.isSpectator();
-        if (e instanceof UtMob m) return Faction.hostile(def.faction(), m.def.faction());
+        if (e instanceof UtMob m) return def.foes().contains(m.def.faction()) || Faction.hostile(def.faction(), m.def.faction());
         return false;
     }
 
