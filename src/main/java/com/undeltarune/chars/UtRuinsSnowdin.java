@@ -147,6 +147,49 @@ public final class UtRuinsSnowdin {
 
         out.add(dummy("dummy", "Dummy", false));
 
+        // Hard Mode Ruins (replace Vegetoid / Moldsmal / Migosp)
+        out.add(CharacterDef.of("parsnik", "Parsnik", Faction.UNDERGROUND).hp(60).keep(6).rest(26).speed(.15f)
+            .egg(0xefe3c0, 0x3c9a3c).size(.6f, 1.1f).scale(.85f)
+            .model(new ModelDef()
+                .box("body", null, 0, 6, 0, 8, 10, 8, 0xefe3c0)
+                .box("ridge", "body", 0, -2, -4.1f, 5, .5f, .3f, 0xd2c39a)
+                .glow("eyeL", "body", -2, 2, -4.1f, 1.4f, 1.8f, .3f, 0x1a120a).glow("eyeR", "body", 2, 2, -4.1f, 1.4f, 1.8f, .3f, 0x1a120a)
+                .box("mouth", "body", 0, -.6f, -4.1f, 4.5f, 1.4f, .3f, 0x3a140a)
+                .box("head", "body", 0, 6, 0, 3, 2, 3, 0x2e7a2e)
+                .box("snake1", "head", -2.5f, 2.5f, 0, 1.2f, 5, 1.2f, 0x3c9a3c).box("snake2", "head", 0, 3, 0, 1.2f, 6, 1.2f, 0x3c9a3c)
+                .box("snake3", "head", 2.5f, 2.5f, 0, 1.2f, 5, 1.2f, 0x3c9a3c)
+                .glow("fang1", "snake1", 0, 2.6f, -.7f, .5f, .5f, .3f, 0xff4040).glow("fang2", "snake2", 0, 3.1f, -.7f, .5f, .5f, .3f, 0xff4040)
+                .glow("fang3", "snake3", 0, 2.6f, -.7f, .5f, .5f, .3f, 0xff4040)
+                .limb("armL", "body", -4.8f, 2, 0, 1.5f, 4, 1.5f, 0x3c9a3c).limb("armR", "body", 4.8f, 2, 0, 1.5f, 4, 1.5f, 0x3c9a3c))
+            .attacks(parsnikSnakeBounce(), parsnikSnakeDrop()).build());
+
+        out.add(CharacterDef.of("moldessa", "Moldessa", Faction.UNDERGROUND).hp(60).keep(6).rest(26).speed(.12f)
+            .egg(0x6fae6a, 0xe07aa0).size(.8f, .7f).scale(.9f)
+            .model(new ModelDef()
+                .box("body", null, 0, 3.5f, 0, 11, 7, 9, 0x6fae6a)
+                .box("head", "body", 0, 4.5f, 0, 7, 4, 6, 0x86c47e)
+                .box("tip", "head", 0, 2.5f, 0, 3, 2, 3, 0x9fd696)
+                .glow("eyeL", "body", -2.4f, .8f, -4.6f, 1.6f, .7f, .3f, 0x1a2a12).glow("eyeR", "body", 2.4f, .8f, -4.6f, 1.6f, .7f, .3f, 0x1a2a12)
+                .box("lips", "body", 0, -1.6f, -4.7f, 3, 1, .4f, 0xe07aa0))
+            .attacks(moldessaBurst(), moldessaZigzag()).build());
+
+        out.add(CharacterDef.of("migospel", "Migospel", Faction.UNDERGROUND).hp(60).keep(5).rest(26)
+            .egg(0x6a4cb2, 0xf0e070).size(.5f, 1.2f).scale(.75f)
+            .model(new ModelDef()
+                .box("body", null, 0, 10, 0, 5, 9, 5, 0x6a4cb2)
+                .box("head", "body", 0, 7, 0, 5, 5, 5, 0x7b5cc6)
+                .glow("eyeL", "head", -1.2f, 1, -2.6f, .9f, 1.5f, .3f, 0xfff27a).glow("eyeR", "head", 1.2f, 1, -2.6f, .9f, 1.5f, .3f, 0xfff27a)
+                .box("stripeL", "head", -1.2f, -.4f, -2.6f, .3f, 1.2f, .3f, 0x4a2c82).box("stripeR", "head", 1.2f, -.4f, -2.6f, .3f, 1.2f, .3f, 0x4a2c82)
+                .box("nose", "head", 0, -.6f, -2.8f, .9f, .9f, .4f, 0x5a3a92).box("smile", "head", 0, -1.8f, -2.6f, 3, .6f, .3f, 0x221030)
+                .box("antL", "head", -1.5f, 4, 0, .4f, 3, .4f, 0x4a2c82).box("antR", "head", 1.5f, 4, 0, .4f, 3, .4f, 0x4a2c82)
+                .box("antL2", "antL", -.7f, 1.5f, 0, 1.4f, .4f, .4f, 0x4a2c82).box("antR2", "antR", .7f, 1.5f, 0, 1.4f, .4f, .4f, 0x4a2c82)
+                .ghost("wingL", "body", -3.5f, 2, 2.6f, 4, 5, .4f, 0xd8c8ff, .6f).ghost("wingR", "body", 3.5f, 2, 2.6f, 4, 5, .4f, 0xd8c8ff, .6f)
+                .ghost("wingL2", "body", -3, -1.5f, 2.6f, 3, 3.5f, .4f, 0xd8c8ff, .6f).ghost("wingR2", "body", 3, -1.5f, 2.6f, 3, 3.5f, .4f, 0xd8c8ff, .6f)
+                .limb("armL", "body", -3, 3, 0, 1.2f, 4, 1.2f, 0x5a3ca2).limb("armR", "body", 3, 3, 0, 1.2f, 4, 1.2f, 0x5a3ca2)
+                .box("handL", "armL", 0, -4.2f, 0, 1.8f, 1.8f, 1.8f, 0x7b5cc6).box("handR", "armR", 0, -4.2f, 0, 1.8f, 1.8f, 1.8f, 0x7b5cc6)
+                .limb("legL", null, -1.2f, 6, 0, 1.2f, 6, 1.2f, 0x4a2c82).limb("legR", null, 1.2f, 6, 0, 1.2f, 6, 1.2f, 0x4a2c82))
+            .attacks(migospelRoachWalls(), migospelLonelyRoach()).build());
+
         // ---------------- Snowdin ----------------
         out.add(CharacterDef.of("ice_cap", "Ice Cap", Faction.UNDERGROUND).hp(28).keep(6).rest(28)
             .egg(0x3c6cbf, 0xbfefff).size(.5f, 1.3f).scale(.8f)
@@ -1023,6 +1066,108 @@ public final class UtRuinsSnowdin {
             p.r("body", 0, 0, .2f * w).r("armL", -2.5f, 0, .5f * w).r("armR", -2.5f, 0, .5f * w).r("legL", .5f * w, 0, 0).r("legR", -.5f * w, 0, 0);
         });
     }
+    // ---- Hard Mode Ruins
+    static final int SNAKE = 0x3c9a3c;
+    /** One snake = a head + two trailing body segments following the same path a few ticks behind. */
+    static void snake(AttackCtx c, int t, int t0, int t1, IntFunction<Vec3> path) {
+        for (int s0 = 0; s0 < 3; s0++) { final int s = s0, lag = s0 * 3;
+            step(c, t, t0 + lag, t1 + lag, 3, k -> path.apply(k - lag), p -> p.box(s == 0 ? .32f : .24f, s == 0 ? .32f : .24f, s == 0 ? .32f : .24f)
+                .color(s == 0 ? 0x2e7a2e : SNAKE).dmg(3).spawn()); }
+    }
+    static Anim parsnikPose = (p, t, m) -> {
+        float s = env(t, 8, 90, 12), w = (float) Math.sin(t * .6f) * s;
+        p.r("snake1", .3f * w, 0, -.5f * s).r("snake2", -.6f * s + .2f * w, 0, 0).r("snake3", .3f * w, 0, .5f * s)
+            .r("armL", -1.6f * s, 0, .3f).r("armR", -1.6f * s, 0, -.3f).o("body", 0, (float) Math.abs(Math.sin(t * .3f)) * s * .6f, 0);
+    };
+    /** Snakes pour from above and bounce off the side walls of the board. */
+    static Attack parsnikSnakeBounce() {
+        return atk("parsnik_snake_bounce", 100, null, (c, t) -> {
+            Board b = board(c, t);
+            if (t == 4) { c.sound(SoundEvents.SILVERFISH_AMBIENT, 1, .6f); c.particle(ParticleTypes.ITEM_SLIME, c.eye().add(0, .8, 0), 8, .3, .05); }
+            for (int i = 0; i < 6; i++) {
+                int t0 = 8 + i * 8; double x0 = (hr(i + 60) - .5) * 6, vx = (hr(i + 61) < .5 ? -1 : 1) * (.14 + hr(i + 62) * .06), z = (hr(i + 63) - .5) * 3.5;
+                if (t == t0 - 6) mark(c, b.at(x0, 0, z), .6f, .6f, SNAKE, 8);
+                snake(c, t, t0, t0 + 66, k -> {
+                    double u = k - t0, x = x0 + vx * u; x = ((x + 4.5) % 18 + 18) % 18; x = x > 9 ? 18 - x : x; // bounce between walls
+                    double y = u < 14 ? 5 - 4.6 * Math.pow(u / 14, 2) : .4 + 1.4 * Math.abs(Math.sin((u - 14) * Math.PI / 20));
+                    return b.at(x - 4.5, y, z + .3 * Math.sin(u * .5));
+                });
+            }
+        }, parsnikPose);
+    }
+    /** Snakes drop straight down in waves and vanish at the floor. */
+    static Attack parsnikSnakeDrop() {
+        return atk("parsnik_snake_drop", 90, null, (c, t) -> {
+            Board b = board(c, t);
+            if (t >= 6 && t < 66 && t % 5 == 1) {
+                int i = t; double x0 = (hr(i + 80) - .5) * 7, z = (hr(i + 81) - .5) * 4;
+                mark(c, b.at(x0, 0, z), .5f, .5f, SNAKE, 12);
+                snake(c, t, t + 4, t + 28, k -> b.at(x0 + .25 * Math.sin((k - i) * .6), 5 - (k - i - 4) * .21, z));
+            }
+        }, parsnikPose);
+    }
+    static Anim moldessaPose = (p, t, m) -> {
+        float s = env(t, 6, 90, 10), sq = (float) Math.sin(t * .35f);
+        p.o("body", 0, -.6f * sq * s, 0).o("head", 0, 1.2f * sq * s, 0).o("tip", 0, .8f * Math.max(0, sq) * s, 0);
+    };
+    /** Bullets travel straight down, then explode into 8 smaller pellets. */
+    static Attack moldessaBurst() {
+        return atk("moldessa_burst", 90, null, (c, t) -> {
+            Board b = board(c, t);
+            for (int i = 0; i < 5; i++) {
+                int t0 = 6 + i * 11; Vec3 top = b.at((hr(i + 90) - .5) * 6, 5, (hr(i + 91) - .5) * 3.5), pop = top.add(0, -3.6, 0);
+                if (t == t0 - 6) mark(c, pop.add(0, -1.4, 0), .7f, .7f, 0x6fae6a, 22);
+                if (t == t0) dot(c, top, new Vec3(0, -.24, 0), .45f, 0x6fae6a, 3).life(15).spawn();
+                if (t == t0 + 15) {
+                    for (int k = 0; k < 8; k++) { double a = k * Math.PI / 4; dot(c, pop, new Vec3(Math.cos(a) * .16, -.03, Math.sin(a) * .16), .22f, 0x9fd696, 3).life(32).spawn(); }
+                    c.particle(ParticleTypes.ITEM_SLIME, pop, 8, .25, .05); c.sound(SoundEvents.SLIME_SQUISH, .8f, 1.1f);
+                }
+            }
+        }, moldessaPose);
+    }
+    /** Bullets fall in a zigzag and do not explode. */
+    static Attack moldessaZigzag() {
+        return atk("moldessa_zigzag", 90, null, (c, t) -> {
+            Board b = board(c, t);
+            for (int i = 0; i < 9; i++) {
+                int t0 = 6 + i * 6; double x0 = (hr(i + 100) - .5) * 6, z0 = (hr(i + 101) - .5) * 3.5;
+                step(c, t, t0, t0 + 40, 5, k -> {
+                    double u = k - t0, tri = Math.abs(((u / 10) % 2 + 2) % 2 - 1) * 2 - 1;
+                    return b.at(x0 + tri * 1.2, 5 - u * .13, z0);
+                }, p -> p.box(.32f, .32f, .32f).color(0x6fae6a).dmg(3).warn(t == t0 ? 3 : 0).spawn());
+            }
+        }, moldessaPose);
+    }
+    /** Cockroaches fly upward from the left and right of the board; they never cross the middle. */
+    static Attack migospelRoachWalls() {
+        return atk("migospel_roach_walls", 100, null, (c, t) -> {
+            Board b = board(c, t);
+            if (t >= 6 && t < 80 && t % 2 == 0) for (int s = -1; s <= 1; s += 2) {
+                double x = s * (1.0 + c.rnd.nextDouble() * 3.4), z = (c.rnd.nextDouble() - .5) * 4;
+                dot(c, b.at(x, 0, z), new Vec3(0, .19, 0).add(b.r().scale(s * .01)), .26f, 0x3a2a1a, 3).warn(3).life(22).spawn();
+            }
+            if (t % 12 == 0) c.sound(SoundEvents.SILVERFISH_STEP, .5f, 1.6f);
+        }, (p, t, m) -> {
+            float s = env(t, 6, 100, 10), f = (float) Math.sin(t * 1.3f) * .5f * s;
+            p.r("armL", -1.2f * s, 0, -.5f * s).r("armR", -1.2f * s, 0, .5f * s) // hands half-cover the big smile
+                .r("wingL", 0, f, 0).r("wingR", 0, -f, 0).r("wingL2", 0, f * .7f, 0).r("wingR2", 0, -f * .7f, 0)
+                .o("eyeL", 0, (float) Math.sin(t * .4f) * .4f, 0).o("eyeR", 0, (float) Math.sin(t * .4f) * .4f, 0);
+        });
+    }
+    /** Alone, a tiny cockroach dances along the bottom of the board - and unlike Migosp's, it hurts. */
+    static Attack migospelLonelyRoach() {
+        return atk("migospel_lonely_roach", 80, m -> m.level().getEntitiesOfClass(UtMob.class, m.getBoundingBox().inflate(10), e -> e != m).isEmpty(), (c, t) -> {
+            Board b = board(c, t);
+            step(c, t, 4, 74, 4, k -> b.at(Math.sin(k * .15) * 3, .15 + .35 * Math.abs(Math.sin(k * .5)), Math.cos(k * .11) * 1.5),
+                p -> p.box(.24f, .24f, .24f).color(0x3a2a1a).dmg(3).spawn());
+            if (t % 10 == 0) c.particle(ParticleTypes.NOTE, c.eye().add(0, .5, 0), 1, .2, 1);
+        }, (p, t, m) -> {
+            float w = (float) Math.sin(t * .5f);
+            p.r("body", 0, 0, .25f * w).r("armL", -2.6f, 0, .5f * w).r("armR", -2.6f, 0, .5f * w).r("legL", .5f * w, 0, 0).r("legR", -.5f * w, 0, 0)
+                .r("wingL", 0, .4f * w, 0).r("wingR", 0, -.4f * w, 0);
+        });
+    }
+
     /** Tears arc out of Napstablook's eyes, then fall straight. */
     static Attack curvedTears() {
         return atk("curved_tears", 90, null, (c, t) -> {
