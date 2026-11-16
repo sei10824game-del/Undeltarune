@@ -20,6 +20,7 @@ public final class AuYellowFangames {
         out.add(clover()); out.add(decibat()); out.add(dalv()); out.add(martlet()); out.add(bailador());
         out.add(starlo()); out.add(ed()); out.add(moray()); out.add(ace()); out.add(mooch());
         out.add(guardener()); out.add(ceroba()); out.add(axis()); out.add(chujin()); out.add(flowey()); out.add(zenith());
+        com.undeltarune.chars.uty.UtyFieldEnemies.register(out); // every regular enemy/miniboss, area by area
     }
 
     /** Generic UTY humanoid body. */

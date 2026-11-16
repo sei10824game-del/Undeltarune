@@ -664,6 +664,39 @@ public final class DrCh2 {
                 .box("mouth", "head", 0, -1.2f, -.2f, 3, .6f, .2f, 0xd82a2a)
                 .limb("armL", "body", -5, 1, 0, 1, 3, 1, 0x2a6ad9).limb("armR", "body", 5, 1, 0, 1, 3, 1, 0x2a6ad9))
             .attacks(poppupBirds(), poppupWindows()).build());
+        ModelDef www = biped(0x4a2a6a, 0x2a1a4a, 0x4a2a6a, 0x2a1a4a, 5.8f, 6.4f)
+            .box("collar", "body", 0, 3.6f, 0, 8, 1.8f, 5.6f, 0xf4f4f4)
+            .box("drill", "head", 0, .4f, -4.2f, 3.6f, 3.6f, 1.6f, 0x9a9aae).box("drill2", "drill", 0, 0, -1.4f, 2.2f, 2.2f, 1.4f, 0xb8b8c8)
+            .box("drill3", "drill", 0, 0, -2.6f, 1, 1, 1.2f, 0xd8d8e0)
+            .glow("trimL", "body", -3, 0, -2.1f, .5f, 5, .3f, CYAN).glow("trimR", "body", 3, 0, -2.1f, .5f, 5, .3f, CYAN)
+            .box("clawL", "armL", 0, -6.8f, -.6f, 2, 1, 2.6f, 0x9a9aae).box("clawR", "armR", 0, -6.8f, -.6f, 2, 1, 2.6f, 0x9a9aae);
+        out.add(CharacterDef.of("werewerewire", "Werewerewire", Faction.CYBER_CITY).hp(60).keep(6).rest(22).scale(1.1f).egg(0x4a2a6a, CYAN).random()
+            .model(www).attacks(wwwLaserBalls(), wwwSnakeLasers()).build());
+    }
+    /** Werewire's beams and energy balls, faster and more erratic: drill-mask lasers flick between angles while balls drop. */
+    static Attack wwwLaserBalls() {
+        return atk("werewerewire_laser_balls", 70, (c, t) -> {
+            if (t == 4) { c.dash(new Vec3(0, .8, 0)); c.sound(SoundEvents.BEACON_ACTIVATE, .6f, 1.8f); }
+            if (t >= 10 && t < 60) { c.dash(c.right().scale(Math.sin(t * .25) * .28).add(0, .05, 0));
+                if (t % 4 == 0) { Vec3 at = c.pos().add(0, -.2, 0); c.proj().at(at).vel(c.aim(at).scale(.15).add(0, -.12, 0)).gravity(.02f).box(.5f, .5f, .5f).color(CYAN).dmg(3).life(34).spawn();
+                    c.particle(ParticleTypes.ELECTRIC_SPARK, at, 6, .2, .05); }
+                if (t % 9 == 1) { Vec3 f = c.tpos().subtract(c.eye()); beam(c, c.eye(), rotY(f, (c.rnd.nextDouble() - .5) * .9), 12, .25f, 0xff4040, 7, 4, 4);
+                    c.sound(SoundEvents.BEACON_POWER_SELECT, .5f, 2); } }
+        }, (p, t, m) -> { float s = t >= 10 && t < 60 ? 1 : 0; p.r("body", 0, 0, .45f * wave(t, .25f) * s).r("armL", 0, 0, -.8f).r("armR", 0, 0, .8f)
+            .r("drill", 0, 0, t * .6f).r("legL", -.5f * s, 0, 0).r("legR", -.5f * s, 0, 0); });
+    }
+    /** Large lasers snake toward the target: a head node weaves in, leaving a hanging telegraphed body that then fires. */
+    static Attack wwwSnakeLasers() {
+        return atk("werewerewire_snake_lasers", 90, (c, t) -> {
+            for (int k = 0; k < 2; k++) { int b = 8 + k * 30, n = 14;
+                if (t == b) { Vec3 f = flat(c.aim(c.pos())); put(c, "wsh" + k, c.tpos().add(side(f).scale(k == 0 ? -6 : 6))); c.sound(SoundEvents.REDSTONE_TORCH_BURNOUT, .7f, 1.2f); }
+                if (t > b && t <= b + n) { Vec3 h = get(c, "wsh" + k), d = c.tpos().subtract(h); int i = t - b;
+                    Vec3 step = rotY(flat(d), Math.sin(i * .9) * .9).scale(.75).add(0, d.y * .05, 0); Vec3 nh = h.add(step); put(c, "wsh" + k, nh);
+                    c.proj().at(h.add(step.scale(.5))).face(step).box(.55f, .55f, (float) step.length() + .1f).color(0xff4040).dmg(5).warn(24 - i).life(24 - i + 8).pierce().spawn();
+                    c.particle(ParticleTypes.ELECTRIC_SPARK, nh, 3, .1, .05); }
+                if (t == b + n + 10) { c.sound(SoundEvents.LIGHTNING_BOLT_IMPACT, .6f, 1.6f); c.particle(ParticleTypes.FLASH, get(c, "wsh" + k), 1, 0, 0); } }
+        }, (p, t, m) -> { float a = env(t, 4, 8, 30, 36), b = env(t, 34, 38, 60, 66);
+            p.r("armR", -2.6f * a, .6f * a, 0).r("armL", -2.6f * b, -.6f * b, 0).r("head", -.3f * (a + b), 0, 0).r("drill", 0, 0, t * .8f); });
     }
     static Attack werewireElectricBalls() {
         return atk("werewire_electric_balls", 66, (c, t) -> {
