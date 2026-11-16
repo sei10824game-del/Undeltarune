@@ -6,6 +6,7 @@ import com.undeltarune.def.CharacterDef.Attitude;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.phys.Vec3;
+import com.undeltarune.entity.UtProjectile;
 import java.util.List;
 
 import static com.undeltarune.chars.drlate.DrKit.*;
@@ -27,10 +28,9 @@ public final class DrCh3Ch4 {
         out.add(shadowguy()); out.add(pippins()); out.add(shuttah()); out.add(zapper()); out.add(watercooler());
         out.add(ribbick()); out.add(laninoElnina()); out.add(tenna()); out.add(knight()); out.add(shadowMantle());
         // ---------- Chapter 4 ----------
-        out.add(guei()); out.add(balthizard()); out.add(mizzle());
-       
-       
-       
+        out.add(guei()); out.add(balthizard()); out.add(mizzle()); out.add(bibliox()); out.add(jackenstein()); out.add(missMizzle());
+        out.add(hammerOfJustice()); out.add(winglade()); out.add(organikk()); out.add(wicabel()); out.add(soundOfJustice());
+        out.add(titanSpawn()); out.add(titan()); out.add(smallMike()); out.add(catMike()); out.add(cowboyMike());
     }
 
     static CharacterDef.Builder tv(String id, String name) { return CharacterDef.of(id, name, Faction.NEUTRAL).att(Attitude.HOSTILE); }
@@ -733,7 +733,748 @@ public final class DrCh3Ch4 {
         }, (p, t, m) -> { raise(p, ramp(t, 0, 10) * .6f); p.r("coneL", 0, t * .2f, 0).r("coneR", 0, -t * .2f, 0); });
     }
 
+    // ---- shared Ch4 helpers ----
+    /** This attacker's live bullets of one color (colors double as tags). */
+    static List<UtProjectile> own(AttackCtx c, int rgb) {
+        return c.level.getEntitiesOfClass(UtProjectile.class, c.me.getBoundingBox().inflate(40), p -> p.ownerId == c.me.getId() && p.color() == rgb);
+    }
+    /** One-tick hazard re-spawned every tick at a moving point: hands, pendulum bobs, centipede segments. */
+    static UtProjectile frame(AttackCtx c, Vec3 at, Vec3 face, float w, float h, float l, int rgb, float dmg) {
+        return c.proj().at(at).face(face).box(w, h, l).color(rgb).dmg(dmg).life(1).pierce().spawn();
+    }
+    /** Swaps a bullet for an identical one of another color (bullets can't be re-tinted in place). */
+    static UtProjectile recolor(AttackCtx c, UtProjectile k, int rgb, float dmg) {
+        UtProjectile n = c.proj().at(k.position()).vel(k.getDeltaMovement()).box(k.w(), k.h(), k.l()).color(rgb).dmg(dmg).life(Math.max(10, k.maxLife() - k.age())).spawn();
+        k.discard(); return n;
+    }
+
     // =====================================================================================================
-    // BIBLIOX - blue book-wizard, page beard, lettered robe
+    // BIBLIOX - blue hard-cover book that opens into a stout wizard: page beard, pointed hat
     // =====================================================================================================
+    static final int BIB = 0x2f5fc8, PAGE = 0xf4ecd0, TORN = 0xc8e8ff, BFIRE = 0xff7a1a, BUB = 0x9fe8ff, BUB2 = 0xc8f4ff;
+    static CharacterDef bibliox() {
+        ModelDef m = new ModelDef()
+            .box("body", null, 0, 8, 0, 9, 11, 6, BIB).box("trim", "body", 0, -5, 0, 9.4f, 1, 6.4f, 0xe8c040)
+            .box("coverL", "body", -4.8f, 0, -1.5f, .6f, 11.4f, 6.4f, 0x1c3a80).box("coverR", "body", 4.8f, 0, -1.5f, .6f, 11.4f, 6.4f, 0x1c3a80)
+            .box("letters", "body", 0, 1, -3.1f, 6, 5, .2f, PAGE)
+            .box("head", "body", 0, 8, 0, 7, 5, 6, 0xd8e4ff)
+            .glow("eyeL", "head", -1.6f, .8f, -3.1f, 1, 1, .3f, 0x101830).glow("eyeR", "head", 1.6f, .8f, -3.1f, 1, 1, .3f, 0x101830)
+            .box("beard", "head", 0, -3.5f, -2.6f, 6, 6, 1.4f, PAGE).box("beard2", "beard", 0, -3.5f, 0, 4, 2.5f, 1.2f, PAGE)
+            .box("hat", "head", 0, 3.5f, 0, 8, 2, 7, BIB).box("hat2", "hat", 0, 2, 0, 5, 2.5f, 5, BIB).box("hat3", "hat2", 0, 2.2f, 0, 2.5f, 2.5f, 2.5f, BIB)
+            .glow("star", "hat2", 0, 0, -2.6f, 1.2f, 1.2f, .3f, YEL)
+            .limb("armL", "body", -5.5f, 4, 0, 1.8f, 7, 1.8f, BIB).limb("armR", "body", 5.5f, 4, 0, 1.8f, 7, 1.8f, BIB)
+            .limb("legL", null, -2, 2.5f, 0, 2, 2.5f, 3, 0x1c3a80).limb("legR", null, 2, 2.5f, 0, 2, 2.5f, 3, 0x1c3a80);
+        return tv("bibliox", "Bibliox").hp(70).egg(BIB, PAGE).size(.7f, 2f).keep(6).model(m).attacks(bibTornado(), bibFire(), bibBubbles()).build();
+    }
+    /** The two spell books that open at either side of the board. */
+    static Vec3 bibBook(AttackCtx c, int s) { return c.tpos().add(side(toT(c)).scale(4.5 * s)).add(0, .6, 0); }
+    static void bibOpen(AttackCtx c, int t) {
+        if (t != 4) return;
+        for (int s = -1; s <= 1; s += 2) { Vec3 at = bibBook(c, s);
+            prop(c, at, toT(c), 1.4f, 1.8f, .3f, BIB, 90); prop(c, at.add(0, .1, 0), side(toT(c)), .2f, 1.6f, 1.3f, PAGE, 90); fx(c, ParticleTypes.ENCHANT, at, 24, .6); }
+        c.sound(SoundEvents.BOOK_PAGE_TURN, 1, .8f);
+    }
+    static void bibPose(Pose p, float t, float period) {
+        float s = ramp(t, 0, 10), k = (t % period) / period, cast = env(k, 0, .3f, .5f, 1);
+        p.r("coverL", 0, -1.3f * s, 0).r("coverR", 0, 1.3f * s, 0).r(((int) (t / period)) % 2 == 0 ? "armR" : "armL", -1.6f * cast * s, 0, 0)
+            .r("hat", 0, 0, sin(t, .3f) * .1f).r("beard", sin(t, .2f) * .1f, 0, 0);
+        hover(p, t, .4f);
+    }
+    /** Books on either side send alternating arcs of tornado bullets at the SOUL. */
+    static Attack bibTornado() {
+        return atk("bibliox_tornado_arcs", 96, (c, t) -> {
+            bibOpen(c, t);
+            if (t >= 16 && t < 84 && t % 8 == 0) {
+                int s = (t / 8) % 2 == 0 ? 1 : -1; Vec3 at = bibBook(c, s), d = c.aim(at);
+                for (int k = 0; k < 5; k++) shot(c, at, rot(d, (k - 2) * .22 * s).scale(.24 + k * .02), .4f, TORN, 3, 3, 50);
+                fx(c, ParticleTypes.CLOUD, at, 6, .3); c.sound(SoundEvents.PHANTOM_FLAP, .6f, 1.6f);
+            }
+            if (t > 16) for (UtProjectile p : own(c, TORN)) { p.setDeltaMovement(rot(p.getDeltaMovement(), Math.sin(p.age() * .4) * .07));
+                if (p.age() % 4 == 0) fx(c, ParticleTypes.CLOUD, p.position(), 1, .05); }
+        }, (p, t, m) -> bibPose(p, t, 8));
+    }
+    /** Books shoot a fire pillar at the SOUL's position; the pillar throws fireballs left and right. */
+    static Attack bibFire() {
+        return atk("bibliox_fire_pillar", 100, (c, t) -> {
+            bibOpen(c, t);
+            if (t >= 16 && t < 80 && t % 16 == 0) {
+                Vec3 base = c.target.position();
+                pillar(c, base, .9f, 6, BFIRE, 5, 14, 6);
+                for (int s = -1; s <= 1; s += 2) bolt(c, bibBook(c, s), base.add(0, .5, 0).subtract(bibBook(c, s)).scale(1 / 14.0), .3f, .6f, 0xffc060, 0, 0, 14);
+                c.sound(SoundEvents.FIRECHARGE_USE, .8f, .9f);
+            }
+            Vec3 r = side(toT(c));
+            for (UtProjectile b : own(c, BFIRE)) if (b.age() == 14) {
+                Vec3 base = b.position().add(0, -2.5, 0);
+                for (int s = -1; s <= 1; s += 2) for (int k = 0; k < 3; k++) shot(c, base.add(0, k * .8, 0), r.scale(s * (.2 + k * .05)), .45f, 0xffa040, 3, 0, 40);
+                fx(c, ParticleTypes.FLAME, base, 16, .4); c.sound(SoundEvents.BLAZE_SHOOT, .7f, 1.1f);
+            }
+        }, (p, t, m) -> bibPose(p, t, 16));
+    }
+    /** Books blow bubbles; some stop and split into three small bubbles that shoot off, slow down and pop. */
+    static Attack bibBubbles() {
+        return atk("bibliox_bubbles", 100, (c, t) -> {
+            bibOpen(c, t);
+            if (t >= 14 && t < 80 && t % 6 == 0) for (int s = -1; s <= 1; s += 2) {
+                Vec3 at = bibBook(c, s); shot(c, at, rot(c.aim(at), (c.rnd.nextDouble() - .5) * .6).scale(.2), .6f, BUB, 3, 3, 60); }
+            for (UtProjectile b : own(c, BUB)) {
+                if (b.age() == 22 && c.rnd.nextInt(3) > 0) b.setDeltaMovement(Vec3.ZERO);
+                else if (b.age() == 32 && b.getDeltaMovement().lengthSqr() < 1e-4) {
+                    Vec3 at = b.position(); b.discard(); double a0 = c.rnd.nextDouble() * Math.PI * 2;
+                    for (int k = 0; k < 3; k++) { double a = a0 + k * Math.PI * 2 / 3; shot(c, at, new Vec3(Math.cos(a), 0, Math.sin(a)).scale(.32), .3f, BUB2, 2, 0, 22); }
+                    fx(c, ParticleTypes.BUBBLE_POP, at, 6, .3); c.sound(SoundEvents.BUBBLE_COLUMN_BUBBLE_POP, 1, 1.4f);
+                }
+            }
+            for (UtProjectile b : own(c, BUB2)) b.setDeltaMovement(b.getDeltaMovement().scale(.9));
+        }, (p, t, m) -> bibPose(p, t, 6));
+    }
+
+    // =====================================================================================================
+    // JACKENSTEIN - Dark Zone miniboss: carved pumpkin head, stitched coat, neck bolts, lantern
+    // Each turn is one of his canon maze layouts fought in the Darkness (TP-starved), plus Bullet Rain.
+    // =====================================================================================================
+    static final int PUMP = 0xf07a18, GHOST = 0xe8e8f8, JWALL = 0x3a2a4a, TREASURE = 0xffd23a;
+    static CharacterDef jackenstein() {
+        ModelDef m = hum(10, 11, 9, 9, 0x3a2a4a, PUMP, 0x6a8a4a, 0x2a1a30)
+            .glow("eyeL", "head", -2, 1.2f, -4.65f, 2, 1.6f, .3f, 0xffe04a).glow("eyeR", "head", 2, 1.2f, -4.65f, 2, 1.6f, .3f, 0xffe04a)
+            .glow("mouth", "head", 0, -2, -4.65f, 5, 1.2f, .3f, 0xffe04a).box("stem", "head", 0, 5.2f, 0, 1.4f, 2, 1.4f, 0x3f7a2a)
+            .box("ridge", "head", 0, 0, 0, 9.3f, 8.6f, 3, 0xd86a10)
+            .box("boltL", "body", -5.2f, 5, 0, 1.6f, 1, 1, 0x9a9aa8).box("boltR", "body", 5.2f, 5, 0, 1.6f, 1, 1, 0x9a9aa8)
+            .box("stitch", "body", 0, 1, -2.8f, .5f, 8, .3f, 0x101010).box("stitchX", "body", 0, 2, -2.8f, 3, .4f, .3f, 0x101010)
+            .box("handle", "armR", 0, -10.5f, -1, .4f, 1.5f, .4f, 0x555555).glow("lantern", "handle", 0, -2, 0, 2, 2.5f, 2, 0xffd060);
+        return tv("jackenstein", "Jackenstein").hp(170).boss().egg(PUMP, 0x3a2a4a).size(.7f, 2.4f).keep(7).rest(14)
+            .model(m).attacks(jackMaze("starter", 0, 3, 0, .18), jackMaze("3x2", 1, 4, 0, .2), jackMaze("normal", 2, 5, 0, .22),
+                jackMaze("chimney", 3, 5, 1, .22), jackMaze("too_long", 4, 6, 0, .24), jackMaze("no_pumpkin", 5, 6, 0, .24),
+                jackMaze("two_pumpkins", 6, 5, 2, .24), jackMaze("your_tutu", 7, 7, 1, .26), jackMaze("final_maze", 8, 12, 0, .3), jackRain()).build();
+    }
+    /** Wall cells of each canon layout on a 7x7 grid around the SOUL (i = sideways, j = depth). */
+    static boolean jackWall(int layout, int i, int j) {
+        int ai = Math.abs(i), aj = Math.abs(j);
+        return switch (layout) {
+            case 0 -> ai == 2 && j != 0 || aj == 3 && ai < 2;                    // Starter: two dining rooms + dungeon
+            case 1 -> (i == -1 || i == 2) && j != -1 && j != 2 || aj == 3;        // 3x2: six clock rooms
+            case 2 -> i % 2 != 0 && j != Math.floorMod(i * 2, 5) - 2;             // Normal: tight vertical corridors
+            case 3 -> ai == 2 && j < 2 || i == -3 && j >= 1;                      // Chimney: flue top-left
+            case 4 -> ai >= 2 && Math.floorMod(j, 2) == 0;                        // Too Long: gappy tower
+            case 5 -> ai % 2 == 0 && aj % 2 == 0;                                 // No Pumpkin: grid of pillars
+            case 6 -> j == 1 && i < 2 || j == -1 && i > -2 || aj == 3;            // Two Pumpkins: snake path
+            case 7 -> Math.floorMod(i - j, 3) == 0;                               // Your Tutu: diagonal maze
+            default -> ai >= 2;                                                   // Final Maze: one long gauntlet
+        };
+    }
+    static Attack jackMaze(String name, int layout, int ghosts, int pumpkins, double gspd) {
+        return atk("jackenstein_maze_" + name, 124, (c, t) -> {
+            Vec3 f = toT(c), r = side(f);
+            if (t == 6) {
+                Vec3 o = c.target.position();
+                for (int i = -3; i <= 3; i++) for (int j = -3; j <= 3; j++)
+                    if (Math.abs(i) + Math.abs(j) > 1 && jackWall(layout, i, j)) pillar(c, o.add(r.scale(i * 1.6)).add(f.scale(j * 1.6)), 1.5f, 2.4f, JWALL, 4, 16, 100);
+                c.sound(SoundEvents.WOODEN_DOOR_CLOSE, 1, .6f); c.sound(SoundEvents.AMBIENT_CAVE.value(), .8f, 1);
+            }
+            if (t % 5 == 0) fx(c, ParticleTypes.LARGE_SMOKE, c.tpos(), 8, 3.5);   // the Darkness closes in
+            int every = Math.max(3, 84 / ghosts);
+            if (t >= 24 && t < 112 && (t - 24) % every == 0) {
+                int lane = c.rnd.nextInt(7) - 3, s = c.rnd.nextBoolean() ? 1 : -1; boolean deep = layout == 8 || c.rnd.nextBoolean();
+                Vec3 d = deep ? f : r, n = deep ? r : f, at = c.target.position().add(n.scale(layout == 8 ? lane * .5 : lane * 1.6)).add(d.scale(-6 * s)).add(0, 1, 0);
+                shot(c, at, d.scale(gspd * s), .7f, GHOST, 4, 8, (int) (12 / gspd)); fx(c, ParticleTypes.SOUL, at, 4, .3);
+            }
+            if (pumpkins > 0 && t >= 20 && t < 20 + pumpkins * 30 && (t - 20) % 30 == 0) {
+                Vec3 at = c.target.position().add(r.scale(-5)).add(f.scale(c.rnd.nextGaussian())).add(0, .4, 0);
+                c.proj().at(at).vel(r.scale(.12).add(0, .3, 0)).box(.9f, .8f, .9f).color(PUMP).dmg(5).gravity(.03f).warn(6).life(90).spawn();
+            }
+            for (UtProjectile p : own(c, PUMP)) if (p.age() % 20 == 0) { p.setDeltaMovement(new Vec3(p.getDeltaMovement().x, .3, p.getDeltaMovement().z)); c.sound(SoundEvents.SLIME_JUMP, .5f, .8f); }
+            for (UtProjectile g : own(c, GHOST)) if (g.age() % 6 == 0) g.setDeltaMovement(g.getDeltaMovement().add(0, Math.sin(g.age() * .5) * .02, 0));
+        }, (p, t, m) -> { float s = ramp(t, 0, 8); p.r("armR", -1.9f * s, 0, -.2f).r("armL", -.4f * s, 0, .4f).r("head", 0, sin(t, .08f) * .6f, 0).r("lantern", sin(t, .2f) * .3f, 0, 0); sway(p, t, .08f); });
+    }
+    static Attack jackRain() {
+        return atk("jackenstein_bullet_rain", 100, (c, t) -> {
+            if (t >= 10 && t < 88 && t % 2 == 0) rain(c, 3.5, 1, .45f, GHOST, 3, 5, .015f);
+            if (t >= 10 && t < 88 && t % 11 == 0) { Vec3 at = c.target.position().add(jit(c, 3)).add(0, 7, 0); prop(c, at, toT(c), .6f, .6f, .6f, TREASURE, 60).grav = .01f; }
+            if (t % 5 == 0) fx(c, ParticleTypes.LARGE_SMOKE, c.tpos(), 6, 3.5);
+            if (t % 20 == 0) c.sound(SoundEvents.SOUL_ESCAPE, .8f, .8f);
+        }, (p, t, m) -> { raise(p, ramp(t, 0, 10)); p.r("head", -.4f * ramp(t, 0, 10), sin(t, .3f) * .2f, 0); });
+    }
+
+    // =====================================================================================================
+    // MISS MIZZLE - big Mizzle in the HolywaterCooler; true form has a flowing water dress and hair
+    // =====================================================================================================
+    static CharacterDef missMizzle() {
+        ModelDef m = mizzleModel(1.5f).ghost("hair", "head", 0, -3, 3, 9, 15, 3, 0x5ab8ff, .6f)
+            .ghost("train", "dress", 0, -1, 2, 16, 3, 13, 0x3a9fff, .5f).glow("blush", "head", 0, -1.2f, -3.95f, 4, .5f, .3f, 0xff9fd8);
+        return tv("miss_mizzle", "Miss Mizzle").hp(190).boss().egg(0x3a9fff, 0xff9fd8).size(.9f, 2.2f).keep(7).speed(.2f).rest(14).model(m)
+            .attacks(coolerRain("miss_mizzle", 1), coolerRain("miss_mizzle", 2), coolerRain("miss_mizzle", 3), holyWater("miss_mizzle_holy_water", .34, 2.4)).build();
+    }
+
+    // =====================================================================================================
+    // HAMMER OF JUSTICE - the Old Man (Gerson) in silver armour, pink plume, giant hammer. Green-SOUL shield charts
+    // (DrKit.arrows), shells, hammer tosses and slash flurries following the canon 21-turn order, grouped by HP.
+    // =====================================================================================================
+    static final int SILV = 0xb8bcc8, GSOUL = 0x40e060, SHELL = 0x3fd060;
+    static ModelDef gersonModel(int armor, int hair, int trim) {
+        return hum(12, 13, 9, 7, armor, armor, armor, trim)
+            .glow("visor", "head", 0, .5f, -3.65f, 4, .6f, .3f, 0x101010).glow("slit", "head", 0, -1, -3.65f, .5f, 2.4f, .3f, 0x101010)
+            .box("plume", "head", 0, 3, 2, 2.4f, 3, 6, hair).box("plume2", "plume", 0, -4, 2.5f, 2, 8, 2, hair)
+            .box("pauldL", "body", -5.6f, 5.6f, 0, 3.6f, 2.4f, 5.4f, armor).box("pauldR", "body", 5.6f, 5.6f, 0, 3.6f, 2.4f, 5.4f, armor)
+            .box("haft", "armR", 0, -12, -3, .9f, .9f, 10, 0x6a4a2a).box("hammer", "haft", 0, 0, -5.5f, 5, 4, 3.6f, armor)
+            .box("bootL", "legL", 0, -11.5f, -.8f, 3.2f, 2, 4, trim).box("bootR", "legR", 0, -11.5f, -.8f, 3.2f, 2, 4, trim);
+    }
+    static CharacterDef hammerOfJustice() {
+        String a17 = ring8("R", 5, true) + ring8("D", 5, false) + ring8("R", 11, true) + ring8("D", 30, false);
+        return tv("hammer_of_justice", "Hammer of Justice").hp(420).boss().egg(SILV, 0xff8ac8).size(.8f, 2.6f).keep(7).rest(12).speed(.3f)
+            .model(gersonModel(SILV, 0xff8ac8, 0x7a7e8a)).attacks(
+                hojChart("hammer_of_justice_arrows_1", .75f, 2, "U U U L D R", 12, .25f),
+                hojChart("hammer_of_justice_arrows_3", .75f, 2, "U U U L D - R R L L R L U U U", 8, .35f),
+                hojChart("hammer_of_justice_arrows_4", .7f, 2, "R U D R D U L - R U D L D U L L R", 6, .45f),
+                hojChart("hammer_of_justice_arrows_5_eight_way", .6f, 2, "U R U L U R U L U R U L UL UL UR", 8, .38f),
+                hojHammerFall(), hojShell(), hojHammers(),
+                hojChart("hammer_of_justice_arrows_9", .3f, .75f, "UL UL U U UR UR UL U UR U U UL U UR D DL D DR", 6, .4f),
+                hojChart("hammer_of_justice_shells_10", .3f, .65f, "L L L R R R U UL D DR R R R L L L D DR U - - U L - - L R - - R", 6, .4f),
+                hojChart("hammer_of_justice_shells_11", .15f, .5f, "U L R D - - U L R D U L DL D DR R UR U - D R L D UL DL DR DR U", 5, .45f),
+                hojSlashes(), hojSqueeze(),
+                hojChart("hammer_of_justice_cyan_shells_15", .1f, .4f, "U - - U - - U UR L UR U - U L R DR R UL L UR DL U", 6, .45f),
+                hojChart("hammer_of_justice_shells_16", .1f, .4f, "L D DR R - L - U D R - D U R UR U - UL DR R UR - U U U U H", 6, .45f),
+                hojChart("hammer_of_justice_sweep_17", -1, .35f, a17, 4, .45f),
+                hojStorm("hammer_of_justice_storm_18", 32, false), hojStorm("hammer_of_justice_storm_19", 48, true),
+                hojChart("hammer_of_justice_cyan_shells_20", -1, .3f, "U R DR D U UR R UR U UL R R UR U UR U L DL R U L R D UL", 5, .5f),
+                hojFinale()).build();
+    }
+    /** n arrow directions walking around the 8-way compass from `from`, clockwise or counterclockwise. */
+    static String ring8(String from, int n, boolean cw) {
+        String[] o = {"U", "UR", "R", "DR", "D", "DL", "L", "UL"}; int i = List.of(o).indexOf(from); StringBuilder b = new StringBuilder();
+        for (int k = 0; k < n; k++) b.append(o[Math.floorMod(i + (cw ? k : -k), 8)]).append(' ');
+        return b.toString();
+    }
+    /** Green-SOUL turn: the SOUL flashes green and arrows (DrKit.arrows) come in on a fixed chart; repeated directions double as shells. */
+    static Attack hojChart(String id, float lo, float hi, String seq, int gap, float spd) {
+        int n = seqLen(seq);
+        return phase(id, 14 + n * gap + 26, lo, hi, (c, t) -> {
+            if (t == 2) { fx(c, ParticleTypes.HAPPY_VILLAGER, c.tpos(), 20, .6); c.sound(SoundEvents.ANVIL_LAND, .5f, 1.6f); }
+            arrows(c, seq, t, 14, gap, spd, GSOUL, 4);
+            if (t >= 14 && (t - 14) % gap == 0 && (t - 14) / gap < n) c.sound(SoundEvents.NOTE_BLOCK_HAT.value(), .6f, 1.2f + spd);
+        }, (p, t, m) -> { pointLoop(p, t, "armL", gap * 2); p.r("armR", -.5f, 0, -.2f).r("plume2", sin(t, .3f) * .2f, 0, 0); });
+    }
+    /** Attack 6: arrows while a hammer slowly descends; it lands (SOUL turns red) and Gerson slashes down the middle. */
+    static Attack hojHammerFall() {
+        String seq = "D UL D UR D R D L";
+        return phase("hammer_of_justice_falling_hammer", 140, .5f, 2, (c, t) -> {
+            arrows(c, seq, t, 14, 10, .3f, GSOUL, 4);
+            Vec3 tp = c.tpos(), f = toT(c);
+            if (t >= 10 && t < 94 && t % 2 == 0) prop(c, tp.add(0, 9 - (t - 10) * .07, 0), f, 2.6f, 1.8f, 1.6f, SILV, 2);
+            if (t == 94) { line(c, tp.add(0, 3, 0), new Vec3(0, -1, 0).add(f.scale(.01)), 3, 2.2f, SILV, 6, 6, 6); fx(c, ParticleTypes.EXPLOSION, c.target.position(), 2, .3); c.sound(SoundEvents.ANVIL_LAND, 1.2f, .6f); }
+            if (t == 106) { line(c, c.tpos(), f, 12, .6f, WHITE, 6, 10, 5); c.sound(SoundEvents.PLAYER_ATTACK_SWEEP, 1, .6f); }
+        }, (p, t, m) -> { if (t < 90) pointLoop(p, t, "armL", 20); chop(p, t - 96, 10, 34); });
+    }
+    /** Attack 7: a shell ricochets off the board's edges leaving stars; Gerson bats it back in, then slams it down for a star fountain. */
+    static Attack hojShell() {
+        return phase("hammer_of_justice_shell_volley", 130, .3f, .8f, (c, t) -> {
+            Vec3 f = toT(c), r = side(f);
+            if (t == 10) { c.proj().at(c.tpos().add(r.scale(-5))).vel(r.scale(.3).add(f.scale(.14))).box(.9f, .6f, .9f).color(SHELL).dmg(5).life(110).pierce().spawn(); c.sound(SoundEvents.TURTLE_SHAMBLE, 1, .8f); }
+            for (UtProjectile s : own(c, SHELL)) {
+                Vec3 o = s.position().subtract(c.tpos()), v = s.getDeltaMovement();
+                if (Math.abs(o.dot(f)) > 3 && Math.signum(o.dot(f)) == Math.signum(v.dot(f))) v = v.subtract(f.scale(2 * v.dot(f)));
+                if (Math.abs(o.dot(r)) > 5.5 && Math.signum(o.dot(r)) == Math.signum(v.dot(r))) { v = rot(v.subtract(r.scale(2 * v.dot(r))), (c.rnd.nextDouble() - .5) * .8); c.sound(SoundEvents.ANVIL_PLACE, .6f, 1.5f); }
+                if (t == 96) { v = Vec3.ZERO; s.setPos(c.tpos().add(0, 4, 0)); fx(c, ParticleTypes.CRIT, s.position(), 10, .3); }
+                if (t == 104) v = new Vec3(0, -.6, 0);
+                s.setDeltaMovement(v);
+                if (t % 2 == 0 && t < 96) shot(c, s.position(), Vec3.ZERO, .25f, STAR, 3, 0, 30);
+                if (t == 110) { Vec3 at = new Vec3(s.getX(), c.target.getY() + .2, s.getZ()); s.discard();
+                    for (int k = 0; k < 18; k++) { double a = k * Math.PI / 9;
+                        c.proj().at(at).vel(new Vec3(Math.cos(a) * .12, .45 + c.rnd.nextDouble() * .15, Math.sin(a) * .12)).box(.3f, .3f, .3f).color(STAR).dmg(3).gravity(.035f).life(40).spawn(); }
+                    c.sound(SoundEvents.GENERIC_EXPLODE, .8f, 1.3f); }
+            }
+        }, (p, t, m) -> { if (t < 96) throwR(p, t % 24, 8, 22); else chop(p, t - 96, 8, 30); });
+    }
+    static void hojToss(AttackCtx c, Vec3 d, float s, float dmg) {
+        Vec3 at = c.tpos().add(d.scale(-6)).add(0, 1, 0);
+        c.proj().at(at).vel(d.scale(.28 + c.rnd.nextDouble() * .1).add(0, .32 + c.rnd.nextDouble() * .15, 0)).box(s, s * .8f, s * 1.3f).color(SILV).dmg(dmg).gravity(.03f).warn(3).life(50).spawn();
+        c.sound(SoundEvents.PLAYER_ATTACK_SWEEP, .5f, 1.6f);
+    }
+    /** Attacks 8/14: board knocked diagonal, arcing hammer tosses, a volley of bigger ones, then a huge hammer down the center. */
+    static Attack hojHammers() {
+        return phase("hammer_of_justice_hammer_toss", 124, .2f, .75f, (c, t) -> {
+            Vec3 f = toT(c), d = rot(side(f), Math.PI / 4);
+            if (t == 4) { c.sound(SoundEvents.ANVIL_LAND, 1, 1.2f); fx(c, ParticleTypes.CRIT, c.tpos(), 20, 1); }
+            if (t >= 14 && t < 60 && t % 6 == 0) hojToss(c, d, .5f, 4);
+            if (t >= 64 && t < 90 && t % 9 == 1) hojToss(c, d, 1.1f, 6);
+            if (t == 96) { pillar(c, c.target.position(), 2.6f, 6, SILV, 9, 16, 6); prop(c, c.target.position().add(0, 8, 0), f, 3.4f, 2.4f, 2.4f, SILV, 18); c.sound(SoundEvents.ANVIL_PLACE, 1, .5f); }
+        }, (p, t, m) -> { if (t < 92) throwR(p, t < 64 ? t % 6 * 3 : (t - 1) % 9 * 2, 10, 18); else raise(p, env(t, 92, 100, 108, 118)); });
+    }
+    /** Attack 12: a flying hammer bats the (red) SOUL aside, slashes on mid/right/left lanes, a two-Gerson fakeout, then the real cut. */
+    static Attack hojSlashes() {
+        int[] lanes = {0, 1, -1, 0, -1, 1, -1};
+        return phase("hammer_of_justice_slash_flurry", 150, .15f, .55f, (c, t) -> {
+            Vec3 f = toT(c), r = side(f);
+            if (t == 6) { c.proj().at(c.tpos().add(r.scale(7))).vel(r.scale(-.5)).box(1.6f, 1.4f, 1.4f).color(SILV).dmg(6).warn(4).life(20).pierce().spawn(); c.sound(SoundEvents.ANVIL_LAND, 1, .8f); }
+            if (t >= 24 && (t - 24) % 11 == 0 && (t - 24) / 11 < lanes.length) { int k = lanes[(t - 24) / 11];
+                line(c, c.tpos().add(r.scale(k * 1.8)), f, 12, .6f, WHITE, 6, 9, 4); c.sound(SoundEvents.PLAYER_ATTACK_SWEEP, 1, .7f + k * .1f); }
+            if (t == 110) for (int s = -1; s <= 1; s += 2) { prop(c, c.tpos().add(r.scale(4 * s)), f, .8f, 2.4f, .8f, SILV, 16); prop(c, c.tpos().add(r.scale(4 * s)).add(0, 1.4, 0), f, .5f, 1.2f, .5f, 0xff8ac8, 16); }
+            if (t == 126) { line(c, c.tpos(), r, 14, .6f, WHITE, 8, 8, 5); c.sound(SoundEvents.PLAYER_ATTACK_STRONG, 1, .6f); }
+        }, (p, t, m) -> chop(p, (t + 86) % 11 * 2, 12, 22));
+    }
+    /** Attack 13: board squashed thin and wide; slash runs left->right, right->left, then wide cuts with one small safe gap. */
+    static Attack hojSqueeze() {
+        return phase("hammer_of_justice_squeeze_slashes", 140, .15f, .55f, (c, t) -> {
+            Vec3 f = toT(c), r = side(f);
+            if (t >= 12 && t < 52 && t % 4 == 0) line(c, c.tpos().add(r.scale(-5 + (t - 12) * .2)), f, 4, .4f, WHITE, 5, 8, 3);
+            if (t >= 56 && t < 96 && t % 4 == 0) line(c, c.tpos().add(r.scale(5 - (t - 56) * .2)), f, 4, .4f, WHITE, 5, 8, 3);
+            if (t >= 100 && t < 132 && t % 10 == 0) { double safe = (c.rnd.nextDouble() * 2 - 1) * 3.5;
+                for (int k = -5; k <= 5; k++) if (Math.abs(k - safe) > 1.2) line(c, c.tpos().add(r.scale(k)), f, 4, .7f, WHITE, 5, 10, 3);
+                c.sound(SoundEvents.PLAYER_ATTACK_SWEEP, 1, .5f); }
+            if (t % 4 == 0 && t >= 12 && t < 96) c.sound(SoundEvents.PLAYER_ATTACK_SWEEP, .4f, 1.6f);
+        }, (p, t, m) -> { chop(p, t % 8 * 2, 6, 16); p.r("body", 0, t < 56 ? -.4f : .4f, 0); });
+    }
+    /** Attacks 18/19: arrows from random directions - 32 accelerating, or 48 slow but packed tight. */
+    static final String[] DIR8 = {"L", "R", "U", "D", "UL", "UR", "DL", "DR"};
+    static Attack hojStorm(String id, int n, boolean dense) {
+        int gap = dense ? 3 : 4;
+        return phase(id, 16 + n * gap + 24, -1, .3f, (c, t) -> {
+            if (t < 16 || (t - 16) % gap != 0 || (t - 16) / gap >= n) return;
+            int i = (t - 16) / gap;
+            arrows(c, DIR8[c.rnd.nextInt(8)], 0, 0, 1, dense ? .2f : .25f + .35f * i / n, GSOUL, 4);
+            if (i % 2 == 0) c.sound(SoundEvents.NOTE_BLOCK_HAT.value(), .5f, 1.2f + .8f * i / n);
+        }, (p, t, m) -> { pointLoop(p, t, "armL", 8); pointLoop(p, t + 4, "armR", 8); });
+    }
+    /** Attack 21: shells (incl. a fast red one), a hammer from the left, then slashes sweeping counterclockwise from the top-right. */
+    static Attack hojFinale() {
+        return phase("hammer_of_justice_final_verdict", 170, -1, .25f, (c, t) -> {
+            arrows(c, "U L UR R R - U L UR R R U - R R", t, 10, 5, .4f, GSOUL, 4);
+            Vec3 f = toT(c), r = side(f);
+            if (t == 86) { c.proj().at(c.tpos().add(r.scale(-7))).vel(r.scale(.5)).box(1.6f, 1.4f, 1.4f).color(SILV).dmg(6).warn(6).life(22).pierce().spawn(); c.sound(SoundEvents.ANVIL_LAND, 1, .7f); }
+            if (t >= 100 && t < 162 && t % 4 == 0) { Vec3 d = rot(f.add(r).normalize(), (t - 100) * .16);
+                line(c, c.tpos().add(d.scale(2.2)), d, 4.4f, .5f, WHITE, 6, 8, 3); c.sound(SoundEvents.PLAYER_ATTACK_SWEEP, .7f, 1 + (t - 100) * .01f); }
+        }, (p, t, m) -> { if (t < 96) pointLoop(p, t, "armL", 10); else { p.r("armR", -2.2f, 0, 0).r("body", 0, (t - 100) * .16f, 0); } });
+    }
+
+    // =====================================================================================================
+    // WINGLADE - living quill pen: white blade body, wings, halo, single eye ("Halo, goodeye!")
+    // =====================================================================================================
+    static final int HALO = 0xffe680, BLADE = 0xe8f0ff, VGREEN = 0x60ff70;
+    static CharacterDef winglade() {
+        ModelDef m = new ModelDef()
+            .box("body", null, 0, 12, 0, 3, 12, 2, BLADE).box("nib", "body", 0, -8, 0, 1.6f, 4, 1.6f, 0x9aa8c8).box("tip", "nib", 0, -2.6f, 0, .6f, 1.6f, .6f, 0x40485a)
+            .box("head", "body", 0, 8, 0, 4, 4, 3, BLADE).glow("eye", "head", 0, 0, -1.6f, 1.6f, 1.6f, .3f, 0x2a6aff)
+            .glow("halo", "head", 0, 4, 0, 6, .5f, 6, HALO)
+            .box("wingL", "body", -5, 3, 1, 7, 5, .6f, WHITE).box("wingR", "body", 5, 3, 1, 7, 5, .6f, WHITE)
+            .box("featherL", "wingL", -2, -3.5f, 0, 3, 3, .5f, 0xd8e0f0).box("featherR", "wingR", 2, -3.5f, 0, 3, 3, .5f, 0xd8e0f0);
+        return tv("winglade", "Winglade").hp(50).egg(BLADE, HALO).size(.6f, 1.6f).keep(6).model(m).attacks(wingHoop(), wingVvvvv()).build();
+    }
+    /** Hoop Attack: circles the board and shoots hoops (rings of bullets) aimed at the SOUL. */
+    static Attack wingHoop() {
+        return atk("winglade_hoop", 100, (c, t) -> {
+            Vec3 at = around(c, 5.5, t * .09, 1);
+            if (t % 2 == 0) prop(c, at, c.aim(at), 1.2f, .2f, 1.2f, HALO, 2);
+            if (t >= 14 && t < 90 && t % 12 == 2) { Vec3 d = c.aim(at), u = side(flat(d)), w = d.cross(u).normalize();
+                for (int k = 0; k < 10; k++) { double b = k * Math.PI / 5; shot(c, at.add(u.scale(Math.cos(b) * .9)).add(w.scale(Math.sin(b) * .9)), d.scale(.3), .22f, HALO, 3, 4, 34); }
+                fx(c, ParticleTypes.END_ROD, at, 6, .3); c.sound(SoundEvents.AMETHYST_BLOCK_RESONATE, 1, 1.5f); }
+        }, (p, t, m) -> { p.r("wingL", 0, sin(t, .5f) * .5f, 0).r("wingR", 0, -sin(t, .5f) * .5f, 0).r("halo", 0, t * .2f, 0).r("body", 0, t * .09f, 0); hover(p, t, 1); });
+    }
+    /** VVVVV Attack: rears back, flashes green, then stabs - zig-zag blade waves cross the board. */
+    static Attack wingVvvvv() {
+        return atk("winglade_vvvvv", 100, (c, t) -> {
+            int k = (t - 10) % 22;
+            if (t < 10 || t >= 98) return;
+            if (k == 0) { fx(c, ParticleTypes.HAPPY_VILLAGER, c.eye(), 14, .5); c.sound(SoundEvents.AMETHYST_BLOCK_CHIME, 1, 2); }
+            if (k == 10) { Vec3 at = c.eye().add(toT(c)), d = c.aim(at);
+                for (int j = 0; j < 5; j++) bolt(c, at.add(side(flat(d)).scale((j - 2) * .5)), rot(d, (j % 2 == 0 ? 1 : -1) * .12).scale(.5 + j * .02), .2f, 1.4f, VGREEN, 4, 2 + j, 30);
+                c.sound(SoundEvents.TRIDENT_THROW, 1, 1.4f); c.dash(toT(c).scale(.4)); }
+        }, (p, t, m) -> { float k = (t + 210) % 22, back = env(k, 0, 8, 9, 10), stab = env(k, 9, 11, 14, 20);
+            p.r("body", .5f * back - .7f * stab, 0, 0).o("body", 0, 0, 2 * back - 3 * stab).r("wingL", 0, .6f * back, 0).r("wingR", 0, -.6f * back, 0); hover(p, t, .4f); });
+    }
+
+    // =====================================================================================================
+    // ORGANIKK - robed organ Darkner: long pink/purple robes, mask of yellow flute pipes
+    // =====================================================================================================
+    static final int ROBE = 0xb04a9a, PIPE = 0xf0c840, NOTE = 0xf8f0ff, NOTE8 = 0xffd0f0, OBEAM = 0xff9ae0;
+    static CharacterDef organikk() {
+        ModelDef m = hum(3, 14, 8, 7, ROBE, 0x2a1030, ROBE, 0x7a2a6a)
+            .box("hem", "body", 0, -7, 0, 10, 3, 6.4f, 0x7a2a6a).box("hood", "head", 0, 1, .8f, 8, 8, 7, ROBE);
+        for (int k = 0; k < 5; k++) m.box("pipe" + k, "head", -2.4f + k * 1.2f, 1 - Math.abs(k - 2) * .6f, -3.7f, .9f, 4.5f + (2 - Math.abs(k - 2)), .6f, PIPE);
+        return tv("organikk", "Organikk").hp(55).egg(ROBE, PIPE).size(.7f, 1.8f).keep(6).model(m).attacks(orgBeams(), orgSheet()).build();
+    }
+    /** Vertical beams span the board; each beam sounds notes that travel across it in opposite directions. */
+    static Attack orgBeams() {
+        return atk("organikk_pipe_beams", 100, (c, t) -> {
+            Vec3 r = side(toT(c));
+            if (t >= 10 && t < 84 && t % 16 == 10) { double off = c.rnd.nextDouble() * 2 - 1;
+                for (int k = -1; k <= 1; k++) pillar(c, c.target.position().add(r.scale(k * 3 + off)), .5f, 4, OBEAM, 4, 12, 8);
+                c.sound(SoundEvents.NOTE_BLOCK_FLUTE.value(), 1, .7f + c.rnd.nextFloat() * .6f); }
+            for (UtProjectile b : own(c, OBEAM)) if (b.age() == 12) { Vec3 base = b.position(); int s = c.rnd.nextBoolean() ? 1 : -1;
+                for (int y = -1; y <= 1; y++) shot(c, base.add(0, y * 1.1, 0), r.scale(s * (y == 0 ? .22 : -.22)), .35f, NOTE, 3, 0, 40);
+                fx(c, ParticleTypes.NOTE, base, 3, .5); }
+        }, (p, t, m) -> { float s = ramp(t, 0, 8), k = ((t + 6) % 16) / 16f; p.r("armL", -1.2f * s - .5f * env(k, 0, .2f, .4f, .8f), 0, .3f).r("armR", -1.2f * s - .5f * env(k, .1f, .3f, .5f, .9f), 0, -.3f); sway(p, t, .1f); });
+    }
+    /** Sheet music over the board; quarter/half notes fall straight, eighth notes wave as they fall. */
+    static Attack orgSheet() {
+        return atk("organikk_sheet_music", 110, (c, t) -> {
+            Vec3 f = toT(c), r = side(f), top = c.target.position().add(0, 5, 0);
+            if (t == 6) { for (int k = 0; k < 5; k++) prop(c, top.add(0, k * .35, 0), r, .06f, .06f, 9, 0x1a1a1a, 100); c.sound(SoundEvents.BOOK_PAGE_TURN, 1, 1.2f); }
+            if (t >= 16 && t < 96 && t % 4 == 0) { boolean eighth = c.rnd.nextInt(3) == 0;
+                Vec3 at = top.add(r.scale((c.rnd.nextDouble() * 2 - 1) * 4)).add(f.scale(c.rnd.nextGaussian() * .8)).add(0, c.rnd.nextInt(5) * .35, 0);
+                c.proj().at(at).vel(new Vec3(0, eighth ? -.12 : -.16, 0)).box(.4f, .5f, .3f).color(eighth ? NOTE8 : NOTE).dmg(3).warn(4).life(60).spawn(); }
+            if (t % 2 == 0) for (UtProjectile n : own(c, NOTE8)) n.setDeltaMovement(r.scale(Math.cos(n.age() * .25) * .15).add(0, -.12, 0));
+            if (t % 8 == 0) c.sound(SoundEvents.NOTE_BLOCK_HARP.value(), .7f, .5f + (t % 32) / 32f);
+        }, (p, t, m) -> { p.r("armR", -2 + sin(t, .4f) * .6f, 0, -.3f).r("armL", -1.6f - sin(t, .4f) * .4f, 0, .3f).r("head", 0, sin(t, .2f) * .3f, 0); hover(p, t, .3f); });
+    }
+
+    // =====================================================================================================
+    // WICABEL - bell witch: sky-blue dress with a bell skirt, witch hat, shaded face
+    // =====================================================================================================
+    static final int WICA = 0x8fd0f0, BELL = 0xe8c040;
+    static CharacterDef wicabel() {
+        ModelDef m = hum(2, 8, 6, 6, WICA, 0x1a2a3a, WICA, 0x2a3a5a)
+            .glow("eyeL", "head", -1.3f, 0, -3.15f, .9f, .9f, .3f, WHITE).glow("eyeR", "head", 1.3f, 0, -3.15f, .9f, .9f, .3f, WHITE)
+            .box("skirt", "body", 0, -5, 0, 11, 5, 11, WICA).box("rim", "skirt", 0, -2.6f, 0, 12, 1, 12, BELL).box("clapper", "skirt", 0, -3.5f, 0, 2, 2, 2, BELL)
+            .box("brim", "head", 0, 3.2f, 0, 10, .8f, 10, 0x2a3a6a).box("cone", "brim", 0, 2, .5f, 5, 3.5f, 5, 0x2a3a6a).box("tip", "cone", 0, 2.5f, 1, 2.5f, 2.5f, 2.5f, 0x2a3a6a)
+            .box("bow", "brim", 0, .8f, 0, 5.4f, .8f, 5.4f, BELL);
+        return tv("wicabel", "Wicabel").hp(55).egg(WICA, BELL).size(.7f, 1.4f).keep(6).model(m).attacks(wicPendulum()).build();
+    }
+    /** Pendulum Attack: from one of the four corners a pendulum swings at the SOUL; its strike releases a shock wave. */
+    static Attack wicPendulum() {
+        return atk("wicabel_pendulum", 120, (c, t) -> {
+            if (t < 8 || (t - 8) / 36 >= 3) return;
+            int sw = (t - 8) / 36, k = (t - 8) % 36, corner = (sw * 3 + c.me.getId()) & 3;
+            Vec3 f = toT(c), r = side(f), out = r.scale((corner & 1) == 0 ? -1 : 1).add(f.scale((corner & 2) == 0 ? -1 : 1)).normalize();
+            Vec3 pivot = c.tpos().add(out.scale(3.5)).add(0, 5, 0), tgt = c.target.position().add(0, .5, 0).subtract(pivot);
+            float e = k <= 20 ? ramp(k, 2, 20) : 1 - ramp(k, 24, 36); e *= e;
+            Vec3 dir = out.scale(1 - e).add(tgt.normalize().scale(e)).normalize(), bob = pivot.add(dir.scale(tgt.length()));
+            if (k == 0) { c.sound(SoundEvents.BELL_BLOCK, .8f, 1.2f); fx(c, ParticleTypes.ENCHANT, pivot, 16, .5); }
+            frame(c, bob, dir, 1.2f, 1.6f, 1.2f, BELL, k < 2 ? 0 : 5);
+            if (k % 2 == 0) for (int j = 1; j < 5; j++) prop(c, pivot.add(dir.scale(tgt.length() * j / 5)), dir, .12f, .12f, .12f, 0x8a8a9a, 2);
+            if (k == 20) { ring(c, new Vec3(bob.x, c.target.getY() + .3, bob.z), 16, .3, .35f, WICA, 3, sw * .2, 0, 24);
+                fx(c, ParticleTypes.SONIC_BOOM, bob, 1, 0); c.sound(SoundEvents.BELL_BLOCK, 1.2f, .7f); }
+        }, (p, t, m) -> { float k = ((t + 28) % 36) / 36f; p.r("armR", -2.2f * env(k, 0, .3f, .55f, .8f), 0, -.3f).r("skirt", 0, 0, sin(t, .35f) * .15f).r("clapper", sin(t, .7f) * .4f, 0, 0); sway(p, t, .12f); });
+    }
+
+    // =====================================================================================================
+    // SOUND OF JUSTICE - brown statue of the Hammer of Justice brought to life; fought in Darkness by sound
+    // =====================================================================================================
+    static final int SOJ = 0x7a5a3a;
+    static CharacterDef soundOfJustice() {
+        ModelDef m = gersonModel(SOJ, 0x9a7a5a, 0x5a4028).glow("teeth", "head", 0, -2.2f, -3.65f, 3, .5f, .3f, 0xe8e0d0);
+        return tv("sound_of_justice", "Sound of Justice").hp(240).boss().egg(SOJ, WHITE).size(.8f, 2.6f).keep(7).rest(16).speed(.22f)
+            .model(m).attacks(sojEcho("sound_of_justice_echo_arrows", "L R U L - U R R L U - L L R U R", false),
+                sojEcho("sound_of_justice_echo_smash", "U L R - R U L L - U", true), sojSmashes()).build();
+    }
+    /** An arrow from left/right/top with a voice cue (pitch tells the side); its flash fades so later arrows are heard, not seen. */
+    static void sojArrow(AttackCtx c, String d, int i) {
+        Vec3 r = side(toT(c)), from = d.equals("L") ? r.scale(-1) : d.equals("R") ? r : new Vec3(0, 1, 0);
+        bolt(c, c.tpos().add(from.scale(6.5)), from.scale(-.35), .28f, 1.1f, i < 6 ? 0xc8a070 : 0x2a2018, 4, Math.max(0, 10 - i * 2), 22);
+        c.sound(SoundEvents.NOTE_BLOCK_BELL.value(), 1, d.equals("L") ? .7f : d.equals("R") ? 1.4f : 1f);
+    }
+    /** White rectangle marks a lane (left/mid/right), then the statue's hammer comes down there. */
+    static void sojSmash(AttackCtx c, int lane, int warn) {
+        Vec3 f = toT(c), at = c.target.position().add(side(f).scale(lane * 2.2));
+        prop(c, at.add(0, .05, 0), f, 2.2f, .08f, 4, WHITE, warn);
+        pillar(c, at, 2.2f, 3.5f, SOJ, 6, warn, 5);
+        c.sound(SoundEvents.ANVIL_PLACE, .5f, .7f);
+    }
+    static Attack sojEcho(String id, String seq, boolean smash) {
+        String[] k = seq.split(" "); int n = k.length;
+        return atk(id, 14 + n * 9 + (smash ? 40 : 20), (c, t) -> {
+            if (t % 5 == 0) fx(c, ParticleTypes.LARGE_SMOKE, c.tpos(), 8, 3.5);
+            if (t >= 14 && (t - 14) % 9 == 0 && (t - 14) / 9 < n) { int i = (t - 14) / 9; if (!k[i].equals("-")) sojArrow(c, k[i], i); }
+            if (smash && t == 14 + n * 9 + 6) { fx(c, ParticleTypes.FLASH, c.tpos(), 1, 0); sojSmash(c, c.rnd.nextInt(3) - 1, 18); }
+        }, (p, t, m) -> { pointLoop(p, t, "armL", 18); if (smash) chop(p, t - (14 + seqLen(seq) * 9), 18, 40); });
+    }
+    /** Red SOUL: indicators and hammer blows in quick succession on random lanes. */
+    static Attack sojSmashes() {
+        return atk("sound_of_justice_hammer_barrage", 110, (c, t) -> {
+            if (t % 5 == 0) fx(c, ParticleTypes.LARGE_SMOKE, c.tpos(), 8, 3.5);
+            if (t >= 10 && t < 92 && (t - 10) % 12 == 0) sojSmash(c, c.rnd.nextInt(3) - 1, Math.max(8, 16 - (t - 10) / 12));
+        }, (p, t, m) -> chop(p, (t + 2) % 12 * 2, 14, 24));
+    }
+
+    // =====================================================================================================
+    // TITAN SPAWN - darkness-wrapped embryo shapes (spiky, reptilian, amorphous), black with a white eye
+    // =====================================================================================================
+    static final int TSP = 0x0a0a0a, TSPRED = 0x5a0410, EVOLVE = 0x1a1a2a, BIGSHOT = 0x140014, TEYE = 0xf4f4f4, VISOR = 0xffe14a;
+    static CharacterDef titanSpawn() {
+        ModelDef m = new ModelDef()
+            .box("body", null, 0, 9, 0, 8, 8, 8, TSP).ghost("aura", "body", 0, 0, 0, 11, 11, 11, 0x000000, .45f)
+            .box("head", "body", 0, 5, -2, 6, 5, 6, TSP).glow("eye", "head", 0, 0, -3.1f, 1.4f, 1.4f, .3f, TEYE)
+            .box("spike1", "body", -4, 3, 0, 2, 4, 1, TSP).box("spike2", "body", 4, 3, 0, 2, 4, 1, TSP).box("spike3", "body", 0, 4, 3, 1, 4, 2, TSP)
+            .box("spike4", "body", -4.5f, -2, 1, 3, 1, 1, TSP).box("spike5", "body", 4.5f, -2, -1, 3, 1, 1, TSP)
+            .box("tail", "body", 0, -3, 5, 2, 2, 6, TSP).box("tail2", "tail", 0, -1.5f, 3.5f, 1.5f, 3, 1.5f, TSP);
+        return CharacterDef.of("titan_spawn", "Titan Spawn", Faction.RUNAWAY_SHADOW).att(Attitude.HOSTILE).hp(45).egg(TSP, TEYE).size(.7f, 1.2f).keep(5).speed(.28f)
+            .model(m).attacks(tspSwarm()).build();
+    }
+    /** Spawns miniature copies around the board that home on the SOUL; red ones can't be purified. */
+    static Attack tspSwarm() {
+        return atk("titan_spawn_brood", 100, (c, t) -> {
+            if (t >= 8 && t < 70 && t % 6 == 2) { Vec3 at = around(c, 6, c.rnd.nextDouble() * Math.PI * 2, c.rnd.nextDouble() * 2 - .5); boolean red = c.rnd.nextInt(4) == 0;
+                shot(c, at, Vec3.ZERO, .5f, red ? TSPRED : TSP, red ? 4 : 3, 10, 80); fx(c, ParticleTypes.SQUID_INK, at, 6, .3); }
+            if (t > 18) { steer(c, TSP, .012, .16); steer(c, TSPRED, .009, .12); }
+            if (t % 16 == 0) c.sound(SoundEvents.SCULK_CLICKING, .8f, .6f);
+        }, (p, t, m) -> { float s = sin(t, .5f); p.r("body", 0, t * .05f, s * .15f).o("body", 0, Math.abs(s) * 1.5f, 0).r("spike1", 0, 0, s * .4f).r("spike2", 0, 0, -s * .4f).r("tail", s * .5f, 0, 0); });
+    }
+
+    // =====================================================================================================
+    // TITAN - Chapter 4 final boss: black body and hands covered in eyes, huge white wings, faceless winged head
+    // behind a SAVE-point star visor. Attack tiers follow the canon cycle (Swarm / Centipedes / Hands / Big Shots).
+    // =====================================================================================================
+    static CharacterDef titan() {
+        ModelDef m = new ModelDef()
+            .box("body", null, 0, 30, 0, 22, 26, 14, TSP)
+            .box("head", "body", 0, 19, 0, 12, 12, 10, TSP).box("hole", "head", 0, 0, -5.1f, 6, 7, .3f, 0x000000)
+            .glow("visor", "head", 0, 0, -5.6f, 8, 8, .6f, VISOR).glow("visorX", "visor", 0, 0, -.2f, 10, 2, .3f, VISOR).glow("visorY", "visor", 0, 0, -.2f, 2, 10, .3f, VISOR)
+            .box("headWingL", "head", -8, 3, 1, 5, 8, 1, WHITE).box("headWingR", "head", 8, 3, 1, 5, 8, 1, WHITE)
+            .box("wingL", "body", -20, 8, 4, 20, 22, 1.4f, WHITE).box("wingR", "body", 20, 8, 4, 20, 22, 1.4f, WHITE)
+            .box("wingL2", "wingL", -4, -13, 0, 12, 6, 1, 0xdcdcdc).box("wingR2", "wingR", 4, -13, 0, 12, 6, 1, 0xdcdcdc)
+            .limb("armL", "body", -14, 10, 0, 5, 26, 5, TSP).limb("armR", "body", 14, 10, 0, 5, 26, 5, TSP)
+            .box("handL", "armL", 0, -28, -1, 8, 6, 6, TSP).box("handR", "armR", 0, -28, -1, 8, 6, 6, TSP)
+            .glow("handEyeL", "handL", 0, 0, -3.2f, 1.6f, 1.2f, .3f, TEYE).glow("handEyeR", "handR", 0, 0, -3.2f, 1.6f, 1.2f, .3f, TEYE)
+            .box("tail", "body", 0, -15, 2, 14, 8, 10, TSP);
+        int[][] eyes = {{-7, 6}, {-2, 9}, {4, 5}, {8, -2}, {-5, -4}, {1, -8}, {6, -9}, {-9, -10}, {3, 0}, {-1, 2}};
+        for (int k = 0; k < eyes.length; k++) m.glow("eye" + k, "body", eyes[k][0], eyes[k][1], -7.15f, 1.6f, 1.2f, .3f, TEYE);
+        return CharacterDef.of("titan", "Titan", Faction.RUNAWAY_SHADOW).att(Attitude.HOSTILE).hp(720).boss().egg(TSP, VISOR)
+            .scale(2f).size(3f, 7f).keep(11).rest(14).speed(.16f).model(m).attacks(
+                tiSwarm(1), tiCentipedes(1), tiHands(1), tiBigShots(1),
+                tiSwarm(2), tiCentipedes(2), tiHands(2), tiBigShots(2),
+                tiSwarm(3), tiCentipedes(3), tiHands(3), tiBigShots(3), tiDesperation()).build();
+    }
+    static float tiLo(int lv) { return lv == 1 ? .66f : lv == 2 ? .33f : -1; }
+    static float tiHi(int lv) { return lv == 1 ? 2 : lv == 2 ? .66f : .33f; }
+    static void tiPose(Pose p, float t, float arms) { float s = ramp(t, 0, 10);
+        p.r("wingL", 0, sin(t, .15f) * .35f, 0).r("wingR", 0, -sin(t, .15f) * .35f, 0).r("armL", -arms * s, 0, .3f * s).r("armR", -arms * s, 0, -.3f * s).r("visorX", 0, 0, t * .05f); hover(p, t, 1.5f); }
+    /** Swarm (Harder/Hardest): Titan Spawn gather around the board and chase the SOUL; red ones, evolving ones, desperate ones. */
+    static Attack tiSwarm(int lv) {
+        return phase(lv == 1 ? "titan_swarm" : lv == 2 ? "titan_swarm_harder" : "titan_swarm_hardest", 120, tiLo(lv), tiHi(lv), (c, t) -> {
+            if (t >= 8 && t < 90 && t % (lv == 1 ? 8 : lv == 2 ? 6 : 4) == 0) {
+                Vec3 at = around(c, 6.5, c.rnd.nextDouble() * Math.PI * 2, c.rnd.nextDouble() * 2 - .5); int kind = c.rnd.nextInt(4);
+                int col = lv < 3 && kind == 0 ? TSPRED : lv >= 2 && kind == 1 ? EVOLVE : TSP;
+                shot(c, at, Vec3.ZERO, col == EVOLVE ? .45f : .7f, col, col == TSPRED ? 5 : 4, 10, 110); fx(c, ParticleTypes.SQUID_INK, at, 6, .3);
+            }
+            if (t > 18) { steer(c, TSP, lv == 3 ? .02 : .012, lv == 3 ? .22 : .13); steer(c, TSPRED, .01, .1); steer(c, EVOLVE, .015, .14); }
+            for (UtProjectile e : own(c, EVOLVE)) if (e.age() == 50) { fx(c, ParticleTypes.SQUID_INK, e.position(), 10, .4);
+                c.proj().at(e.position()).vel(e.getDeltaMovement().scale(1.6)).box(1, 1, 1).color(TSP).dmg(5).life(60).spawn(); e.discard(); }
+            if (t % 20 == 0) c.sound(SoundEvents.SCULK_CLICKING, 1, .5f);
+        }, (p, t, m) -> tiPose(p, t, .8f));
+    }
+    /** Centipedes: segmented chains circle the board and periodically lunge at the SOUL (4 / 6 segments, then three 3-segment ones). */
+    static Attack tiCentipedes(int lv) {
+        int n = lv == 3 ? 3 : 2, seg = lv == 1 ? 4 : lv == 2 ? 6 : 3; double w = lv == 1 ? .07 : lv == 2 ? .085 : .1;
+        return phase(lv == 1 ? "titan_centipedes" : lv == 2 ? "titan_centipedes_harder" : "titan_centipedes_hardest", 120, tiLo(lv), tiHi(lv), (c, t) -> {
+            if (t == 2) c.sound(SoundEvents.SILVERFISH_AMBIENT, 1.5f, .4f);
+            if (t < 10) return;
+            for (int i = 0; i < n; i++) { double base = i * Math.PI * 2 / n + t * w, cyc = ((t + i * 13) % 40) / 40.0, rush = cyc > .6 ? Math.sin((cyc - .6) / .4 * Math.PI) : 0;
+                if (cyc > .6 && cyc < .63) c.sound(SoundEvents.SILVERFISH_STEP, 1, .5f);
+                for (int s = 0; s < seg; s++) { double a = base - s * .28;
+                    Vec3 at = around(c, 5 - 4 * rush + s * .25 * rush, a, .2 + Math.sin(t * .3 + s) * .2);
+                    frame(c, at, new Vec3(-Math.sin(a), 0, Math.cos(a)), s == 0 ? 1 : .8f, .8f, s == 0 ? 1.2f : .9f, s == 0 ? 0x1a1a1a : TSP, t < 20 ? 0 : 4);
+                    if (s == 0 && t % 3 == 0) prop(c, at.add(0, .45, 0), Vec3.ZERO, .25f, .2f, .25f, TEYE, 2); }
+            }
+        }, (p, t, m) -> tiPose(p, t, 1.4f));
+    }
+    /** The Hands: two huge eyed hands bob at the board's sides, then clap shut over most of it (2 / 3 / 4 closes). */
+    static Attack tiHands(int lv) {
+        int closes = lv + 1;
+        return phase(lv == 1 ? "titan_hands" : lv == 2 ? "titan_hands_fast" : "titan_hands_fastest", 110, tiLo(lv), tiHi(lv), (c, t) -> {
+            if (t < 6) return;
+            Vec3 f = toT(c), r = side(f); int per = 98 / closes; double k = ((t - 6) % per) / (double) per;
+            double close = k < .4 ? 0 : k < .6 ? (k - .4) / .2 : k < .75 ? 1 : 1 - (k - .75) / .25, bob = Math.sin(t * .2 * (1 + lv * .3)) * 1.2;
+            if (Math.abs(k - .6) < .5 / per) { c.sound(SoundEvents.ANVIL_LAND, 1, .4f); fx(c, ParticleTypes.SQUID_INK, c.tpos(), 20, 1); }
+            for (int s = -1; s <= 1; s += 2) { Vec3 at = c.tpos().add(r.scale(s * (6 - 4.6 * close))).add(0, s * bob * (1 - close), 0);
+                frame(c, at, f, 2.6f, 4, 3.4f, TSP, close > .1 ? 6 : 0);
+                for (int fi = 0; fi < 4; fi++) frame(c, at.add(0, 2.6, 0).add(f.scale(-1.2 + fi * .8)), f, .6f, 1.4f, .6f, TSP, 0);
+                if (t % 2 == 0) prop(c, at.add(r.scale(-s * 1.35)), r, .5f, .35f, .1f, TEYE, 2);
+                if (close < .05 && t % (12 - lv * 2) == 0) shot(c, at, r.scale(-s * .25), .35f, TSP, 3, 2, 30);
+            }
+        }, (p, t, m) -> tiPose(p, t, 2.2f));
+    }
+    /** Big Shots 1-3: spawn trickle in while the Titan charges and fires twin shots of darkness (single, burst of 2, burst of 3). */
+    static Attack tiBigShots(int lv) {
+        int per = lv == 1 ? 34 : 26, burst = lv == 1 ? 1 : lv;
+        return phase("titan_big_shots_" + lv, 130, tiLo(lv), tiHi(lv), (c, t) -> {
+            if (t >= 6 && t < 110 && t % (lv == 1 ? 12 : 9) == 0) { Vec3 at = around(c, 6.5, c.rnd.nextDouble() * Math.PI * 2, 0); shot(c, at, Vec3.ZERO, .6f, TSP, 4, 10, 90); }
+            if (t > 16) steer(c, TSP, .012, .12);
+            if (t < 12 || t >= 118) return;
+            int k = (t - 12) % per;
+            if (k < per - 8 && k % 2 == 0) fx(c, ParticleTypes.REVERSE_PORTAL, c.eye(), 8, 1.5);
+            if (k == per - 10) c.sound(SoundEvents.WARDEN_SONIC_CHARGE, .8f, 1.4f);
+            if (k >= per - 6 && (k - (per - 6)) % 3 == 0 && (k - (per - 6)) / 3 < burst) {
+                for (int s = -1; s <= 1; s += 2) { Vec3 at = c.eye().add(side(toT(c)).scale(s * 1.6)); shot(c, at, rot(c.aim(at), s * .06).scale(.4), 1.5f, BIGSHOT, 7, 4, 50); }
+                c.sound(SoundEvents.WARDEN_SONIC_BOOM, .6f, 1.6f);
+            }
+        }, (p, t, m) -> { tiPose(p, t, 1); float k = ((t + per * 4 - 12) % per) / per; p.r("head", -.5f * env(k, 0, .7f, .8f, 1), 0, 0); });
+    }
+    /** Desperation Shots: rapid bursts of 2 or 3 big shots 30 degrees apart, absorbed back for a gigantic laser. */
+    static Attack tiDesperation() {
+        return phase("titan_desperation_shots", 170, -1, .2f, (c, t) -> {
+            if (t >= 10 && t < 100 && t % 9 == 1) { int n = ((t - 10) / 9) % 2 == 0 ? 2 : 3; Vec3 d = c.aim(c.eye());
+                for (int k = 0; k < n; k++) shot(c, c.eye(), rot(d, (k - (n - 1) / 2.0) * Math.toRadians(30)).scale(.32), 1.3f, BIGSHOT, 6, 3, 80);
+                c.sound(SoundEvents.WARDEN_SONIC_BOOM, .5f, 1.8f); }
+            if (t == 104) { for (UtProjectile p : own(c, BIGSHOT)) p.setDeltaMovement(c.eye().subtract(p.position()).normalize().scale(.5)); c.sound(SoundEvents.BEACON_DEACTIVATE, 1.4f, .5f); }
+            if (t > 104 && t < 130 && t % 2 == 0) fx(c, ParticleTypes.REVERSE_PORTAL, c.eye(), 20, 2);
+            if (t == 130) { for (UtProjectile p : own(c, BIGSHOT)) p.discard(); Vec3 d = c.aim(c.eye());
+                line(c, c.eye().add(d.scale(12)), d, 24, 3.2f, BIGSHOT, 12, 16, 14); c.sound(SoundEvents.WARDEN_SONIC_BOOM, 2, .5f); }
+        }, (p, t, m) -> { tiPose(p, t, t < 100 ? 1.2f : 2.6f); p.r("head", t > 100 ? -.6f : 0, 0, 0).r("wingL", 0, t > 100 ? -.9f : 0, 0).r("wingR", 0, t > 100 ? .9f : 0, 0); });
+    }
+
+    // =====================================================================================================
+    // THE MIKES - Tenna's assistants in disguise (Ch4 optional fight): Small Mike (green Pippins), Cat Mike
+    // (Shadowguy), Cowboy Hat Mike (Zapper). PC/console attack sets; "All Mikes" attacks split between them.
+    // =====================================================================================================
+    static final int AUD = 0xd8d8d8, CAT = 0xfafafa, CATRED = 0xff4848, FUR = 0xc8905a, PAW = 0xf4f4f4, BLUECAT = 0x6fb0ff, RECT_TOP = 0xff3030, RECT_LOW = 0xff3232;
+    static ModelDef mic(ModelDef m) { return m.box("mic", "armR", 0, -6.5f, -1.2f, .6f, 2.5f, .6f, 0x8a8a8a).box("micHead", "mic", 0, -1.6f, 0, 1.4f, 1.4f, 1.4f, 0x2a2a2a); }
+    static CharacterDef smallMike() {
+        ModelDef m = mic(hum(4, 6, 6, 8, 0x2f9a40, 0xf4f4f4, 0x181818, 0x181818)
+            .glow("pip1", "head", -2, 2, -4.15f, 1.2f, 1.2f, .3f, 0x2fb040).glow("pip2", "head", 2, -2, -4.15f, 1.2f, 1.2f, .3f, 0x2fb040)
+            .glow("mouth", "head", 0, -.5f, -4.15f, 3.4f, .7f, .3f, 0x2fb040).ghost("outline", "body", 0, 0, 0, 7, 7, 4.4f, 0x7fff9f, .35f));
+        return tv("small_mike", "Small Mike").hp(90).egg(0x2f9a40, 0xf4f4f4).size(.6f, 1.2f).keep(6).model(m)
+            .attacks(mikeApplause(), mikeShutUp(), mikeNormalVolume(), mikeUltimate()).build();
+    }
+    static CharacterDef catMike() {
+        ModelDef m = mic(hum(8, 10, 8, 7, 0x0c0c0c, 0x0c0c0c, 0x0c0c0c, 0x0c0c0c)
+            .box("earL", "head", -2.4f, 4.4f, 0, 1.8f, 2.2f, 1.2f, 0x0c0c0c).box("earR", "head", 2.4f, 4.4f, 0, 1.8f, 2.2f, 1.2f, 0x0c0c0c)
+            .glow("grin", "head", 0, -1.6f, -3.65f, 4.6f, .9f, .3f, WHITE).glow("eyeL", "head", -1.6f, .8f, -3.65f, 1.2f, .5f, .3f, WHITE).glow("eyeR", "head", 1.6f, .8f, -3.65f, 1.2f, .5f, .3f, WHITE)
+            .box("whiskL", "head", -3.6f, -.6f, -3.6f, 2.4f, .2f, .2f, WHITE).box("whiskR", "head", 3.6f, -.6f, -3.6f, 2.4f, .2f, .2f, WHITE)
+            .box("tail", "body", 0, -4, 3, .8f, .8f, 5, 0x0c0c0c));
+        return tv("cat_mike", "Cat Mike").hp(90).egg(0x0c0c0c, WHITE).size(.7f, 2f).keep(6).model(m)
+            .attacks(mikeCatBarrage(), mikeSleepingCats(), mikeCatWalls(), mikeBlueCats()).build();
+    }
+    static CharacterDef cowboyMike() {
+        ModelDef m = mic(new ModelDef()
+            .box("body", null, 0, 11, 0, 7, 10, 4, 0x1d2a5c).box("head", "body", 0, 9, 0, 5, 8, 4, 0x1d2a5c).glow("light", "head", 0, 1, -2.1f, 2, 1, .3f, 0xff2020)
+            .box("brim", "head", 0, 4.4f, 0, 10, .6f, 8, 0x8a5a2a).box("crown", "brim", 0, 1.6f, 0, 5, 2.6f, 5, 0x8a5a2a).box("band", "crown", 0, -.8f, 0, 5.2f, .6f, 5.2f, 0x3a2410)
+            .glow("b1", "body", -1.6f, 2, -2.1f, 1.2f, 1.2f, .3f, 0xff3030).glow("b2", "body", 1.6f, 2, -2.1f, 1.2f, 1.2f, .3f, WHITE)
+            .glow("b3", "body", -1.6f, -1, -2.1f, 1.2f, 1.2f, .3f, WHITE).glow("b4", "body", 1.6f, -1, -2.1f, 1.2f, 1.2f, .3f, 0xff3030)
+            .box("bandana", "body", 0, 4.4f, -1.8f, 5, 1.6f, .6f, 0xd02020)
+            .limb("armL", "body", -4.6f, 4, 0, 2, 9, 2, 0x1d2a5c).limb("armR", "body", 4.6f, 4, 0, 2, 9, 2, 0x1d2a5c)
+            .limb("legL", null, -1, 6, 0, 2, 6, 2.6f, 0x141c40).limb("legR", null, 1, 6, 0, 2, 6, 2.6f, 0x141c40)
+            .box("bootL", "legL", 0, -6, -.6f, 2.4f, 1.4f, 3.4f, 0x6a4020).box("bootR", "legR", 0, -6, -.6f, 2.4f, 1.4f, 3.4f, 0x6a4020));
+        return tv("cowboy_mike", "Cowboy Hat Mike").hp(90).egg(0x1d2a5c, 0x8a5a2a).size(.6f, 2.3f).keep(6).model(m)
+            .attacks(mikeWhitePaws(), mikeBlackPaws(), mikeWhitePaws2(), mikeSleepingCats2()).build();
+    }
+    static void mikeDance(Pose p, float t) { hop(p, t, 10, 1.2f); p.r("armR", -1.4f + sin(t, .6f) * .4f, 0, -.2f).r("armL", sin(t, .6f) * .6f, 0, .3f).r("head", 0, sin(t, .3f) * .3f, 0); }
+
+    // ---- Small Mike ----
+    /** APPLAUSE: clapping microphones rise from below (a wave from the right on the first beat). */
+    static Attack mikeApplause() {
+        return atk("small_mike_applause", 100, (c, t) -> {
+            Vec3 f = toT(c), r = side(f);
+            if (t >= 10 && t < 84 && t % 10 == 0) { int gap = c.rnd.nextInt(7) - 3;
+                for (int k = -3; k <= 3; k++) if (k != gap) c.proj().at(c.target.position().add(r.scale(k * 1.1)).add(f.scale(c.rnd.nextGaussian() * .6)).add(0, -1, 0))
+                    .vel(new Vec3(0, .24, 0)).box(.4f, 1.2f, .4f).color(AUD).dmg(3).warn(8).gravity(.006f).life(40).spawn();
+                for (int k = 0; k < 3; k++) c.sound(SoundEvents.NOTE_BLOCK_HAT.value(), .6f, 1.6f + k * .1f); }
+            if (t == 20) for (int k = 0; k < 5; k++) bolt(c, c.tpos().add(r.scale(7 + k * 1.2)).add(0, k % 2 * .8 - .4, 0), r.scale(-.3), .4f, .9f, AUD, 3, 6, 50);
+        }, (p, t, m) -> { clap(p, t % 10 + 2, 6); hop(p, t, 10, 1.5f); });
+    }
+    /** SHUT UP!!: shushing audience members drop from above while the music cuts out. */
+    static Attack mikeShutUp() {
+        return atk("small_mike_shut_up", 100, (c, t) -> {
+            Vec3 r = side(toT(c));
+            if (t == 4) c.sound(SoundEvents.NOTE_BLOCK_BASS.value(), 1, .5f);
+            if (t >= 12 && t < 84 && t % 8 == 0) { double x = (c.rnd.nextDouble() * 2 - 1) * 3.5;
+                for (int k = -1; k <= 1; k++) c.proj().at(c.target.position().add(r.scale(x + k * .9)).add(0, 6 + Math.abs(k) * .6, 0)).vel(new Vec3(0, -.2, 0))
+                    .box(.5f, 1.3f, .5f).color(AUD).dmg(3).warn(6).gravity(.02f).life(40).spawn(); }
+        }, (p, t, m) -> { p.r("armL", -1.8f * ramp(t, 0, 6), .6f, 0).r("head", .2f, 0, 0).r("armR", -.4f, 0, 0); });
+    }
+    /** NORMAL VOLUME...: audience members stream in from the right, stretched to various lengths. */
+    static Attack mikeNormalVolume() {
+        return atk("small_mike_normal_volume", 100, (c, t) -> {
+            Vec3 f = toT(c), r = side(f);
+            if (t >= 10 && t < 84 && t % 5 == 0) { float len = 1 + c.rnd.nextInt(4);
+                bolt(c, c.tpos().add(r.scale(7)).add(f.scale((c.rnd.nextDouble() * 2 - 1) * 2.5)).add(0, c.rnd.nextDouble() - .5, 0), r.scale(-.3), .5f, len, AUD, 3, 5, 50); }
+            if (t % 20 == 0) c.sound(SoundEvents.NOTE_BLOCK_DIDGERIDOO.value(), .6f, 1);
+        }, (p, t, m) -> mikeDance(p, t));
+    }
+    /** Ultimate Attack (all Mikes): they roll into a ball that drops on the SOUL, shrinking and speeding up each bounce, flanked by two big cats. */
+    static Attack mikeUltimate() {
+        return phase("small_mike_ultimate_attack", 140, -1, .35f, (c, t) -> {
+            Vec3 f = toT(c), r = side(f);
+            if (t == 6) for (int s = -1; s <= 1; s += 2) c.proj().at(c.tpos().add(r.scale(4 * s))).box(1.8f, 1.4f, 2).color(CAT).dmg(0).life(130).spawn();
+            if (t >= 14 && (t - 14) % 24 == 0 && (t - 14) / 24 < 5) { int i = (t - 14) / 24; float s = 2.6f - i * .4f;
+                c.proj().at(c.target.position().add(0, 7, 0)).vel(new Vec3(0, -.1 - i * .06, 0)).box(s, s, s).color(0x2f9a40).dmg(6).gravity(.03f + i * .01f).warn(10).life(40).pierce().spawn();
+                c.sound(SoundEvents.SLIME_JUMP, 1, 1.4f - i * .1f); }
+            catTick(c);
+        }, (p, t, m) -> { raise(p, ramp(t, 0, 10)); p.r("body", (t % 24) * .26f, 0, 0); });
+    }
+
+    // ---- cats (shared): white cats can be pet (touch) to vanish; unpet ones turn red and spit furballs; big sleeping cats just calm down ----
+    static void cat(AttackCtx c, Vec3 at, Vec3 vel, float s, int life) { c.proj().at(at).vel(vel).box(s, s * .8f, s * 1.2f).color(CAT).dmg(0).life(life).spawn(); }
+    static void catTick(AttackCtx c) {
+        for (UtProjectile k : own(c, CAT)) { boolean big = k.w() > 1.2f;
+            if (k.position().distanceTo(c.tpos()) < (big ? 2 : 1.3)) { if (!big) { fx(c, ParticleTypes.HEART, k.position(), 3, .3); c.sound(SoundEvents.CAT_PURR, 1, 1.2f); k.discard(); } }
+            else if (k.age() >= 30) recolor(c, k, CATRED, big ? 0 : 3); }
+        for (UtProjectile k : own(c, CATRED)) { boolean big = k.w() > 1.2f;
+            if (big && k.position().distanceTo(c.tpos()) < 2) { recolor(c, k, CAT, 0); fx(c, ParticleTypes.HEART, k.position(), 4, .5); c.sound(SoundEvents.CAT_PURR, 1, .9f); }
+            else if (k.age() % 16 == 8) { shot(c, k.position(), c.aim(k.position()).scale(.3), .25f, FUR, 3, 0, 30); c.sound(SoundEvents.CAT_HISS, .5f, 1.4f); } }
+    }
+    static Vec3 corner(AttackCtx c, int i, double rx, double fz) { Vec3 f = toT(c), r = side(f); return c.tpos().add(r.scale(i % 2 == 0 ? -rx : rx)).add(f.scale(i < 2 ? -fz : fz)); }
+    // ---- Cat Mike ----
+    static Attack mikeCatBarrage() {
+        return atk("cat_mike_cat_barrage", 110, (c, t) -> {
+            if (t >= 8 && t < 72 && t % 8 == 0) { Vec3 at = corner(c, (t / 8) % 4, 5, 4); cat(c, at, c.aim(at).scale(.05), .7f, 90); c.sound(SoundEvents.CAT_AMBIENT, .7f, 1.3f); }
+            catTick(c);
+        }, (p, t, m) -> mikeDance(p, t));
+    }
+    static Attack mikeSleepingCats() {
+        return atk("cat_mike_sleeping_cats", 120, (c, t) -> {
+            if (t == 6) { for (int i = 0; i < 4; i++) cat(c, corner(c, i, 3, 3), Vec3.ZERO, 1.8f, 110); c.sound(SoundEvents.CAT_PURREOW, 1, .8f); }
+            if (t % 10 == 0) for (UtProjectile k : own(c, CAT)) if (k.w() > 1.2f) fx(c, ParticleTypes.NOTE, k.position().add(0, 1, 0), 1, .2);
+            catTick(c);
+        }, (p, t, m) -> { sway(p, t, .15f); p.r("armL", -2 * ramp(t, 0, 8), 0, .3f).r("earL", 0, 0, sin(t, .4f) * .2f).r("earR", 0, 0, -sin(t, .4f) * .2f); });
+    }
+    static Attack mikeCatWalls() {
+        return atk("cat_mike_cat_walls", 110, (c, t) -> {
+            Vec3 f = toT(c), r = side(f);
+            if (t == 4) prop(c, c.tpos().add(0, 3, 0).add(f.scale(-3)), f, 3, .8f, .1f, 0xfff27a, 30);
+            if (t >= 10 && t < 90 && t % 20 == 10) { int gap = c.rnd.nextInt(5) - 2;
+                for (int k = -3; k <= 3; k++) if (Math.abs(k - gap) > 0) c.proj().at(c.tpos().add(r.scale(7)).add(f.scale(k * .9))).vel(r.scale(-.2)).box(.8f, .7f, .8f).color(CATRED).dmg(3).warn(5).life(70).spawn();
+                c.sound(SoundEvents.CAT_AMBIENT, 1, .9f); }
+            if (t % 7 == 0) bolt(c, c.tpos().add(r.scale(7)).add(f.scale((c.rnd.nextDouble() * 2 - 1) * 3)), r.scale(-.3), .4f, 1 + c.rnd.nextInt(3), AUD, 3, 5, 50);
+            catTick(c);
+        }, (p, t, m) -> mikeDance(p, t));
+    }
+    /** Blue Cats (all Mikes): grab the blue cats (touch) while white cats get in the way. */
+    static Attack mikeBlueCats() {
+        return atk("cat_mike_blue_cats", 120, (c, t) -> {
+            if (t >= 10 && t < 90 && t % 14 == 10) { Vec3 at = c.target.position().add(jit(c, 3)).add(0, 5, 0);
+                c.proj().at(at).vel(new Vec3(0, -.12, 0)).box(.7f, .6f, .8f).color(BLUECAT).dmg(0).gravity(.01f).life(80).spawn(); }
+            if (t >= 16 && t < 96 && t % 9 == 0) { Vec3 at = corner(c, c.rnd.nextInt(4), 5, 4); cat(c, at, c.aim(at).scale(.08), .7f, 70); }
+            for (UtProjectile b : own(c, BLUECAT)) { if (b.getY() < c.target.getY() + .3) b.setDeltaMovement(Vec3.ZERO);
+                if (b.position().distanceTo(c.tpos()) < 1.4) { fx(c, ParticleTypes.HEART, b.position(), 6, .4); c.sound(SoundEvents.CAT_PURR, 1, 1.4f); b.discard(); } }
+            catTick(c);
+        }, (p, t, m) -> { pointLoop(p, t, "armL", 14); hop(p, t, 14, 1); });
+    }
+    // ---- Cowboy Hat Mike ----
+    /** Flashing red rectangle on the ceiling or floor, then a big paw slams through it. */
+    static void pawWarn(AttackCtx c, Vec3 at, boolean top, float w, float l, int warn) {
+        prop(c, new Vec3(at.x, c.target.getY() + (top ? 3 : .05), at.z), toT(c), w, .1f, l, top ? RECT_TOP : RECT_LOW, warn);
+        c.sound(SoundEvents.NOTE_BLOCK_BIT.value(), .6f, top ? 1.6f : 1.1f);
+    }
+    static void pawTick(AttackCtx c) {
+        for (int col : new int[]{RECT_TOP, RECT_LOW}) for (UtProjectile r : own(c, col)) if (r.age() == r.maxLife() - 1) { boolean top = col == RECT_TOP;
+            c.proj().at(r.position().add(0, top ? 2 : -2.45, 0)).vel(new Vec3(0, top ? -.8 : .6, 0)).box(r.w(), 2.6f, r.l()).color(PAW).dmg(6).life(6).pierce().spawn();
+            fx(c, ParticleTypes.POOF, r.position(), 6, .5); c.sound(SoundEvents.WOOL_FALL, 1, .6f); }
+    }
+    static Attack mikeWhitePaws() {
+        return atk("cowboy_mike_white_paws", 110, (c, t) -> {
+            if (t >= 10 && t < 90 && t % 16 == 10) pawWarn(c, c.target.position().add(c.target.getDeltaMovement().scale(6)), c.rnd.nextBoolean(), 2.4f, 2.4f, 14);
+            pawTick(c);
+        }, (p, t, m) -> { float k = ((t + 6) % 16) / 16f; p.r("armR", -2.4f * env(k, 0, .4f, .7f, .9f), 0, -.3f).r("crown", 0, sin(t, .2f) * .2f, 0); });
+    }
+    static Attack mikeBlackPaws() {
+        return atk("cowboy_mike_black_paws", 100, (c, t) -> {
+            if (t >= 8 && t < 86 && t % 3 == 0) rain(c, 3.5, 1, .45f, 0x1a1a1a, 3, 6, .03f);
+            if (t % 12 == 0) c.sound(SoundEvents.WOOL_STEP, .8f, 1.4f);
+        }, (p, t, m) -> mikeDance(p, t));
+    }
+    /** White Paws 2: paws hit both edges at once, leaving only a small safe strip in the middle. */
+    static Attack mikeWhitePaws2() {
+        return atk("cowboy_mike_white_paws_2", 110, (c, t) -> {
+            if (t >= 10 && t < 90 && t % 20 == 10) { Vec3 r = side(toT(c)); boolean top = c.rnd.nextBoolean();
+                for (int s = -1; s <= 1; s += 2) pawWarn(c, c.target.position().add(r.scale(s * 2.3)), top, 3.2f, 5, 16); }
+            pawTick(c);
+        }, (p, t, m) -> { float k = ((t + 10) % 20) / 20f; p.r("armR", -2.4f * env(k, 0, .4f, .7f, .9f), 0, -.3f).r("armL", -2.4f * env(k, 0, .4f, .7f, .9f), 0, .3f); });
+    }
+    /** Sleeping Cats 2 (all Mikes): two big cats on opposite sides need petting while paws drop from the ceiling. */
+    static Attack mikeSleepingCats2() {
+        return atk("cowboy_mike_sleeping_cats_2", 120, (c, t) -> {
+            Vec3 r = side(toT(c));
+            if (t == 6) for (int s = -1; s <= 1; s += 2) cat(c, c.tpos().add(r.scale(4 * s)), Vec3.ZERO, 1.8f, 110);
+            if (t >= 16 && t < 100 && t % 14 == 2) pawWarn(c, c.target.position().add(jit(c, 1.2)), true, 1.8f, 1.8f, 12);
+            pawTick(c); catTick(c);
+        }, (p, t, m) -> mikeDance(p, t));
+    }
 }
