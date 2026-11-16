@@ -19,8 +19,6 @@ public enum Faction {
             case HEROES -> EnumSet.of(CARD_KINGDOM, CYBER_CITY, SPAMTON_NET, ANGELS, RUNAWAY_SHADOW);
             case ANGELS -> EnumSet.of(HEROES);
             case RUNAWAY_SHADOW -> EnumSet.of(HEROES);
-            case ROYAL_GUARD -> EnumSet.of(ROYAL_SCIENCE);
-            case ROYAL_SCIENCE -> EnumSet.of(ROYAL_GUARD);
             case GENOCIDE_ROUTE -> EnumSet.of(UNDERGROUND, ROYAL_GUARD, ROYAL_SCIENCE, CHILDREN);
             case NIGHTMARE_AU -> EnumSet.of(GUARDIAN_AU);
             case GUARDIAN_AU -> EnumSet.of(NIGHTMARE_AU, ERROR_AU);
