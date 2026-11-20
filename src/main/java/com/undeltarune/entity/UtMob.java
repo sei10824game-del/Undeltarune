@@ -78,6 +78,10 @@ public class UtMob extends PathfinderMob {
         if (bar != null) bar.setProgress(hpFrac());
         LivingEntity t = getTarget();
         int i = atkIndex();
+        if ((i >= 0 || def.boss()) && tickCount % 4 == 0 && level() instanceof net.minecraft.server.level.ServerLevel sl) { // aura in the egg's accent color
+            int c = def.eggB(); var dust = new net.minecraft.core.particles.DustParticleOptions(new org.joml.Vector3f((c >> 16 & 255) / 255f, (c >> 8 & 255) / 255f, (c & 255) / 255f), i >= 0 ? 1.2f : .8f);
+            sl.sendParticles(dust, getX(), getY() + getBbHeight() * .5, getZ(), i >= 0 ? 4 : 1, getBbWidth() * .6, getBbHeight() * .4, getBbWidth() * .6, 0);
+        }
         if (i >= 0) {
             Attack a = def.attacks().get(i); int k = atkTick();
             if (t == null || !t.isAlive()) { endAtk(); return; }
