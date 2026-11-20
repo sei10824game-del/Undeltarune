@@ -14,13 +14,14 @@ import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 
 import java.util.*;
 
 /** Renders a CharacterDef's box model as a part tree with idle/walk/head-look + per-attack Pose. */
 public class BlockyRenderer extends EntityRenderer<UtMob> {
     public static final ResourceLocation WHITE = new ResourceLocation(Undeltarune.ID, "textures/entity/white.png");
-    private final float fit, bottom;
+    private final float fit, bottom; private int ov;
     private final CharacterDef def; private final Map<String, List<Part>> kids = new HashMap<>();
 
     public BlockyRenderer(EntityRendererProvider.Context c, CharacterDef d) {
@@ -39,6 +40,7 @@ public class BlockyRenderer extends EntityRenderer<UtMob> {
     @Override public void render(UtMob e, float yaw, float pt, PoseStack ps, MultiBufferSource buf, int light) {
         ps.pushPose();
         ps.mulPose(Axis.YP.rotationDegrees(180 - Mth.rotLerp(pt, e.yBodyRotO, e.yBodyRot)));
+        if (e.deathTime > 0) ps.mulPose(Axis.ZP.rotationDegrees(Math.min(1f, (e.deathTime + pt) / 20f) * 90f));
         ps.scale(def.scale() * fit, def.scale() * fit, def.scale() * fit); ps.scale(-1, -1, 1); ps.translate(0, -bottom / 16, 0);
         Pose pose = new Pose();
         float walk = e.walkAnimation.position(pt), amp = e.walkAnimation.speed(pt), age = e.tickCount + pt;
@@ -51,6 +53,7 @@ public class BlockyRenderer extends EntityRenderer<UtMob> {
         Attack a = e.current();
         if (a != null) a.pose(pose, e.atkTick() + pt, e);
         var solid = buf.getBuffer(RenderType.entityTranslucent(WHITE));
+        ov = e.hurtTime > 0 || e.deathTime > 0 ? OverlayTexture.pack(OverlayTexture.u(1f), OverlayTexture.v(true)) : OverlayTexture.NO_OVERLAY;
         walk(null, ps, pose, solid, buf, light);
         ps.popPose();
         super.render(e, yaw, pt, ps, buf, light);
@@ -66,7 +69,7 @@ public class BlockyRenderer extends EntityRenderer<UtMob> {
             // y axis is flipped (+y = down on screen) so a hanging box spans y in [0,h]; a centered one [-h/2,h/2]
             float y0 = p.hang() ? 0 : -h / 2, y1 = p.hang() ? h : h / 2;
             var v = p.glow() ? buf.getBuffer(RenderType.entityTranslucent(WHITE)) : vc;
-            Cube.draw(v, ps, -hw, y0, -hd, hw, y1, hd, p.rgb(), p.alpha(), p.glow() ? 15728880 : light, true);
+            Cube.draw(v, ps, -hw, y0, -hd, hw, y1, hd, p.rgb(), p.alpha(), p.glow() ? 15728880 : light, true, p.glow() ? OverlayTexture.NO_OVERLAY : ov, !p.glow());
             walk(p.name(), ps, pose, vc, buf, light);
             ps.popPose();
         }
