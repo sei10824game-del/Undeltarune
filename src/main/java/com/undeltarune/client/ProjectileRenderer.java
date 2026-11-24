@@ -30,6 +30,18 @@ public class ProjectileRenderer extends EntityRenderer<UtProjectile> {
         Cube.draw(vc, ps, -w / 2 * f, -h / 2 * f, -l / 2, w / 2 * f, h / 2 * f, l / 2, c, a * .55f, 0, false); // body
         float iw = w * .5f, ih = h * .5f;
         Cube.draw(vc, ps, -iw / 2, -ih / 2, -l / 2 * .98f, iw / 2, ih / 2, l / 2 * .98f, 0xffffff, a, 0, false); // hot core
+        // bone look: white thin elongated box gets knobbed ends (two small cubes per end)
+        boolean white = (c >> 16 & 255) > 220 && (c >> 8 & 255) > 220 && (c & 255) > 220;
+        float th = Math.min(e.w(), Math.min(e.h(), e.l())), lg = Math.max(e.w(), Math.max(e.h(), e.l()));
+        if (white && !warning && th < .4f && lg > th * 3f) {
+            int ax = e.h() == lg ? 1 : e.l() == lg ? 2 : 0; float kn = th * 1.7f * k, half = lg * k / 2;
+            for (int sgn = -1; sgn <= 1; sgn += 2) for (int side = -1; side <= 1; side += 2) {
+                float o = kn * .32f * side, p = sgn * (half - kn * .4f);
+                float cx = ax == 0 ? p : o, cy = ax == 1 ? p : o, cz = ax == 2 ? p : 0;
+                float hk = kn / 2 * .8f;
+                Cube.draw(vc, ps, cx - hk, cy - hk, cz - hk, cx + hk, cy + hk, cz + hk, 0xffffff, a, 0, false);
+            }
+        }
         ps.popPose();
     }
 }
