@@ -96,8 +96,15 @@ public class UtMob extends PathfinderMob {
             if (ok.isEmpty()) { rest = 20; return; }
             int pick = def.randomOrder() ? ok.get(random.nextInt(ok.size())) : ok.get(next++ % ok.size());
             entityData.set(ATK, pick); entityData.set(ATK_T, 0);
+            playSound(net.minecraft.sounds.SoundEvents.NOTE_BLOCK_PLING.get(), .8f, getVoicePitch() * 1.4f);
         }
     }
+    /** Chiptune voice: each character gets its own pitch (hash of id). */
+    @Override public float getVoicePitch() { return .6f + Math.floorMod(def.id().hashCode(), 100) / 100f * 1.1f; }
+    @Override protected net.minecraft.sounds.SoundEvent getHurtSound(net.minecraft.world.damagesource.DamageSource s) { return net.minecraft.sounds.SoundEvents.NOTE_BLOCK_BIT.get(); }
+    @Override protected net.minecraft.sounds.SoundEvent getDeathSound() { return net.minecraft.sounds.SoundEvents.NOTE_BLOCK_BASS.get(); }
+    @Override protected net.minecraft.sounds.SoundEvent getAmbientSound() { return random.nextInt(4) == 0 ? net.minecraft.sounds.SoundEvents.NOTE_BLOCK_BIT.get() : null; }
+    @Override public int getAmbientSoundInterval() { return 120; }
     /** Sans-type attacks ignore invulnerability frames (canon: karma / rapid hits). */
     public boolean noIFrames() { return def.id().endsWith("sans"); }
     /** Sans-type characters dodge most damage (canon), blinking aside; void/creative damage still lands. */

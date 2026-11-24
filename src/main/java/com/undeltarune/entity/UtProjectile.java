@@ -58,6 +58,7 @@ public class UtProjectile extends Entity {
             if (mode == BLUE && !moved(e)) continue;
             if (mode == ORANGE && moved(e)) continue;
             hit.add(e.getId());
+            level().playSound(null, e.blockPosition(), net.minecraft.sounds.SoundEvents.NOTE_BLOCK_SNARE.get(), net.minecraft.sounds.SoundSource.HOSTILE, .7f, 1.2f);
             if (own instanceof UtMob om && om.noIFrames()) e.invulnerableTime = 0;
             e.hurt(own instanceof LivingEntity o ? damageSources().mobAttack(o) : damageSources().magic(), dmg);
             if (!pierce) { discard(); return; }
