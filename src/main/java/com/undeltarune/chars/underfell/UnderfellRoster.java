@@ -7,6 +7,7 @@ import com.undeltarune.def.CharacterDef.Attitude;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /** Underfell versions of the base Undertale monsters: own red/black turns (7 move archetypes mixed per character), tougher, always hostile.
  *  ponytail: archetype moves, not per-character canon; hand-written turns can replace a KIT row. */
@@ -63,6 +64,34 @@ public final class UnderfellRoster {
         return boss && (mv.equals("rise") || mv.equals("laser")) ? a.when(m -> m.hpFrac() < .6f) : a;
     }
 
+    /** Wiki-sourced (underfell.fandom.com): Papyrus has orange + sharp/spiked bones; Asgore's blue-and-orange attack; Mettaton's arm blaster and orb claw. */
+    static void wikiExtras(List<CharacterDef> out) {
+        Map<String, List<Attack>> ex = Map.of(
+            "underfell_papyrus", List.of(
+                AuKit.atk("underfell_papyrus_orange_bones", 60, (c, t) -> { if (t % 10 == 0 && t < 50) { Vec3 f = c.fwd(), r = c.right(); Vec3 o = c.tpos().add(f.scale(-7)).add(0, -.9, 0);
+                        for (int k = -3; k <= 3; k++) c.proj().at(o.add(r.scale(k * 1.6))).vel(f.scale(.5)).box(.3f, 1.8f, .3f).orange().dmg(5).warn(8).life(30).spawn(); } },
+                    (p, t, m) -> { float e = AuKit.env(t, 8, 46, 10); p.r("armR", -e * 2.6f, 0, 0).r("armL", -e * 2.6f, 0, 0); }),
+                AuKit.atk("underfell_papyrus_spiked_bones", 56, (c, t) -> { if (t == 0 || t == 16 || t == 32) { Vec3 g = c.target.position();
+                        for (int k = 0; k < 5; k++) { double a = k * 1.256 + t; AuKit.pillar(c, g.add(Math.cos(a) * 2.2, 0, Math.sin(a) * 2.2), 3.6f, .28f, 0xffffff, 6, 18, 22); }
+                        AuKit.fan(c, c.eye(), 3, 24, .85, .2f, 0xffffff, 5, 6, 34); } },
+                    (p, t, m) -> { float e = AuKit.env(t, 10, 42, 10); p.r("armR", -e * 2.2f, 0, 0).o("body", 0, e * .3f, 0); })),
+            "underfell_asgore", List.of(
+                AuKit.atk("underfell_asgore_blue_orange", 64, (c, t) -> { if (t % 16 == 0 && t < 60) { boolean blue = (t / 16) % 2 == 0; Vec3 f = c.aim(c.eye());
+                        for (int k = -4; k <= 4; k++) { var b = c.proj().at(c.eye().add(c.right().scale(k * .8))).vel(new Vec3(f.x, 0, f.z).scale(.5)).box(.5f, 1.6f, .5f).dmg(7).warn(10).life(36);
+                            (blue ? b.blue() : b.orange()).spawn(); } } },
+                    (p, t, m) -> { float e = AuKit.env(t, 10, 52, 12); p.r("armR", -e * 2.8f, 0, 0).o("body", 0, e * .3f, 0); })),
+            "underfell_mettaton", List.of(
+                AuKit.atk("underfell_mettaton_blaster_arm", 60, (c, t) -> { if (t == 6 || t == 24 || t == 42) Fx.blaster(c, c.pos().add(c.right().scale(-1.2)).add(0, 2.2, 0), c.aim(c.eye()), 18, 14, 6, .9f, 0x303030, 0xff2020, 0xff5050); },
+                    (p, t, m) -> { float e = AuKit.env(t, 8, 52, 8); p.r("armL", -e * 1.6f, 0, 0).o("body", 0, e * .2f, 0); }),
+                AuKit.atk("underfell_mettaton_orb_claw", 56, (c, t) -> { if (t == 8 || t == 22) AuKit.fan(c, c.eye().add(c.right().scale(1)), 7, 70, .5, .55f, 0xff2020, 5, 10, 44);
+                        if (t == 36) { c.aoe(c.pos().add(c.fwd().scale(1.8)), 2.6, 8, .7); c.particle(net.minecraft.core.particles.ParticleTypes.SWEEP_ATTACK, c.pos().add(c.fwd().scale(1.8)).add(0, 1, 0), 3, .3, 0); } },
+                    (p, t, m) -> { float e = AuKit.env(t, 8, 44, 10); p.r("armR", -e * 2.4f, 0, 0); })));
+        for (var en : ex.entrySet()) for (int i = 0; i < out.size(); i++) if (out.get(i).id().equals(en.getKey())) {
+            CharacterDef o = out.get(i); List<Attack> a = new ArrayList<>(o.attacks()); a.addAll(en.getValue());
+            out.set(i, new CharacterDef(o.id(), o.name(), o.faction(), o.toPlayer(), o.hp(), o.speed(), o.scale(), o.width(), o.height(), o.boss(), o.randomOrder(), o.rest(), o.keepDist(), o.eggA(), o.eggB(), o.model(), a, o.foes()));
+        }
+    }
+
     /** Call after the base groups are registered. */
     public static void register(List<CharacterDef> out) {
         List<CharacterDef> add = new ArrayList<>();
@@ -77,6 +106,7 @@ public final class UnderfellRoster {
                 b.boss(), b.randomOrder(), Math.max(8, b.rest() * 3 / 4), b.keepDist(), 0xb01818, 0x1a1a1a, m, atks.isEmpty() ? b.attacks() : atks, b.foes()));
         }
         out.addAll(add);
+        wikiExtras(out);
     }
 
     /** Darker, redder; glows (eyes/magic) turn blood red. */
