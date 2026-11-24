@@ -31,9 +31,9 @@ public class BlockyRenderer extends EntityRenderer<UtMob> {
         float lo = 1e9f, hi = -1e9f; Map<String, Float> abs = new HashMap<>();
         for (Part p : d.model().parts) {
             float y = (p.parent() == null ? 0 : abs.getOrDefault(p.parent(), 0f)) + p.py(); abs.put(p.name(), y);
-            lo = Math.min(lo, p.hang() ? y : y - p.h() / 2); hi = Math.max(hi, p.hang() ? y + p.h() : y + p.h() / 2);
+            lo = Math.min(lo, p.hang() ? y - p.h() : y - p.h() / 2); hi = Math.max(hi, p.hang() ? y : y + p.h() / 2);
         }
-        bottom = hi; fit = hi > lo ? d.height() * 16 / (hi - lo) : 1;
+        bottom = lo; fit = hi > lo ? d.height() * 16 / (hi - lo) : 1;
     }
     @Override public ResourceLocation getTextureLocation(UtMob e) { return WHITE; }
 
@@ -41,7 +41,7 @@ public class BlockyRenderer extends EntityRenderer<UtMob> {
         ps.pushPose();
         ps.mulPose(Axis.YP.rotationDegrees(180 - Mth.rotLerp(pt, e.yBodyRotO, e.yBodyRot)));
         if (e.deathTime > 0) ps.mulPose(Axis.ZP.rotationDegrees(Math.min(1f, (e.deathTime + pt) / 20f) * 90f));
-        ps.scale(def.scale() * fit, def.scale() * fit, def.scale() * fit); ps.scale(-1, -1, 1); ps.translate(0, -bottom / 16, 0);
+        ps.scale(def.scale() * fit, def.scale() * fit, def.scale() * fit); ps.scale(-1, -1, 1); ps.translate(0, bottom / 16, 0);
         Pose pose = new Pose();
         float walk = e.walkAnimation.position(pt), amp = e.walkAnimation.speed(pt), age = e.tickCount + pt;
         pose.r("armL", Mth.cos(walk * .66f) * amp, 0, 0).r("armR", -Mth.cos(walk * .66f) * amp, 0, 0)

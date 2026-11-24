@@ -35,12 +35,13 @@ public class AttackCtx {
     public void aoe(Vec3 c, double r, float dmg, double knock) {
         for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, new AABB(c, c).inflate(r), x -> x != me && me.isFoe(x))) {
             if (e.position().distanceTo(c) > r) continue;
+            if (me.noIFrames()) e.invulnerableTime = 0;
             e.hurt(me.damageSources().mobAttack(me), dmg);
             Vec3 k = e.position().subtract(c).multiply(1, 0, 1).normalize().scale(knock);
             e.push(k.x, .3, k.z); e.hurtMarked = true;
         }
     }
-    public void hit(LivingEntity e, float dmg) { e.hurt(me.damageSources().mobAttack(me), dmg); }
+    public void hit(LivingEntity e, float dmg) { if (me.noIFrames()) e.invulnerableTime = 0; e.hurt(me.damageSources().mobAttack(me), dmg); }
     public void dash(Vec3 v) { me.setDeltaMovement(v); me.hurtMarked = true; }
     public void tp(Vec3 p) { me.teleportTo(p.x, p.y, p.z); }
     public void face(Vec3 p) { me.getLookControl().setLookAt(p); }

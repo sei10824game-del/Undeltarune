@@ -22,7 +22,7 @@ import java.util.function.Predicate;
 /** Undertale: Ruins + Snowdin. Attack lists follow the Undertale wiki (one Attack = one enemy turn). */
 public final class UtRuinsSnowdin {
     public static void register(List<CharacterDef> out) {
-        out.add(CharacterDef.of("sans", "sans", Faction.UNDERGROUND).att(Attitude.NEUTRAL).hp(120).boss().keep(7).rest(14).speed(.3f)
+        out.add(CharacterDef.of("sans", "Sans", Faction.UNDERGROUND).att(Attitude.NEUTRAL).hp(120).boss().keep(7).rest(14).speed(.3f)
             .egg(0x2a6fd6, 0xffffff).size(.7f, 1.1f).scale(.9f)
             .model(new ModelDef()
                 .box("body", null, 0, 8, 0, 8, 7, 5, 0x3a6fe0)

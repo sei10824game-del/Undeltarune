@@ -58,6 +58,7 @@ public class UtProjectile extends Entity {
             if (mode == BLUE && !moved(e)) continue;
             if (mode == ORANGE && moved(e)) continue;
             hit.add(e.getId());
+            if (own instanceof UtMob om && om.noIFrames()) e.invulnerableTime = 0;
             e.hurt(own instanceof LivingEntity o ? damageSources().mobAttack(o) : damageSources().magic(), dmg);
             if (!pierce) { discard(); return; }
         }

@@ -98,6 +98,8 @@ public class UtMob extends PathfinderMob {
             entityData.set(ATK, pick); entityData.set(ATK_T, 0);
         }
     }
+    /** Sans-type attacks ignore invulnerability frames (canon: karma / rapid hits). */
+    public boolean noIFrames() { return def.id().endsWith("sans"); }
     /** Sans-type characters dodge most damage (canon), blinking aside; void/creative damage still lands. */
     @Override public boolean hurt(net.minecraft.world.damagesource.DamageSource src, float amt) {
         if (!level().isClientSide && def.id().endsWith("sans") && !def.id().equals("underswap_sans") && !src.is(net.minecraft.tags.DamageTypeTags.BYPASSES_INVULNERABILITY)

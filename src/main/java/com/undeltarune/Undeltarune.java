@@ -42,7 +42,9 @@ public class Undeltarune {
                 EntityType.Builder.<UtMob>of((ty, lv) -> new UtMob(ty, lv, d), MobCategory.MONSTER)
                     .sized(d.width() * d.scale(), d.height() * d.scale()).clientTrackingRange(10).build(d.id()));
             MOBS.put(d, t);
-            ITEMS.register(d.id() + "_spawn_egg", () -> new ForgeSpawnEggItem(t, d.eggA(), d.eggB(), new Item.Properties()));
+            ITEMS.register(d.id() + "_spawn_egg", () -> new ForgeSpawnEggItem(t, d.eggA(), d.eggB(), new Item.Properties()) {
+                @Override public Component getName(ItemStack st) { return Component.literal(d.name() + " Spawn Egg"); }
+            });
         }
         TABS.register("main", () -> CreativeModeTab.builder().title(Component.literal("Undeltarune"))
             .icon(() -> new ItemStack(ITEMS.getEntries().iterator().next().get()))
