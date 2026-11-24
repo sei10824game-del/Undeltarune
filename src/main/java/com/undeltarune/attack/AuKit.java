@@ -33,13 +33,7 @@ public final class AuKit {
     /** Colored blaster: skull + jaw + eye glow, thin telegraph that turns into a beam. */
     public static void blaster(AttackCtx c, Vec3 at, Vec3 dir, int charge, int fire, float dmg, float width,
                                int skull, int eye, int beam) {
-        dir = dir.normalize(); double len = 28; int life = charge + fire + 6;
-        c.proj().at(at).face(dir).box(1.1f, 1.0f, 1.2f).color(skull).dmg(0).life(life).spawn();
-        c.proj().at(at.add(dir.scale(.3)).add(0, -.55, 0)).face(dir).box(.8f, .35f, .9f).color(skull).dmg(0).life(life).spawn();
-        c.proj().at(at.add(dir.scale(.55)).add(0, .15, 0)).face(dir).box(.9f, .2f, .12f).color(eye).dmg(0).life(life).spawn();
-        c.proj().at(at.add(dir.scale(len / 2 + .6))).face(dir).box(width, width, (float) len).color(beam)
-            .dmg(dmg).warn(charge).life(charge + fire).pierce().spawn();
-        c.sound(SoundEvents.WARDEN_SONIC_CHARGE, 1.0f, 1.6f);
+        Fx.blaster(c, at, dir, charge, fire, dmg, width, skull, eye, beam);
     }
     /** Static segment a->b (strings, slashes, lasers, vines). */
     public static void seg(AttackCtx c, Vec3 a, Vec3 b, float thick, int rgb, float dmg, int warn, int life) {
