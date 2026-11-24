@@ -87,7 +87,10 @@ public class UtMob extends PathfinderMob {
             if (t == null || !t.isAlive()) { endAtk(); return; }
             a.tick(new AttackCtx(this, t), k);
             if (k + 1 >= a.duration) endAtk(); else entityData.set(ATK_T, k + 1);
-        } else if (t != null && --rest <= 0 && distanceTo(t) < 28) {
+        } else {
+            if (tickCount % 10 == 0) retarget(t);
+        }
+        if (i >= 0) { /* mid-turn: keep target */ } else if (t != null && --rest <= 0 && distanceTo(t) < 28) {
             List<Integer> ok = new ArrayList<>();
             for (int j = 0; j < def.attacks().size(); j++) if (def.attacks().get(j).usable(this)) ok.add(j);
             if (ok.isEmpty()) { rest = 20; return; }
@@ -104,6 +107,16 @@ public class UtMob extends PathfinderMob {
             return false;
         }
         return super.hurt(src, amt);
+    }
+    /** Between turns: answer whoever hit us lately, else the nearest foe, so a distant target can't let others kill us unchallenged. */
+    private void retarget(LivingEntity cur) {
+        LivingEntity hb = getLastHurtByMob();
+        if (hb != null && hb.isAlive() && tickCount - getLastHurtByMobTimestamp() < 100 && hb != cur) { setTarget(hb); return; }
+        LivingEntity best = cur; double bd = cur == null || !cur.isAlive() ? 1e9 : distanceToSqr(cur);
+        for (LivingEntity e : level().getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(24), x -> x != this && x.isAlive() && isFoe(x))) {
+            double d = distanceToSqr(e); if (d < bd * .64) { best = e; bd = d; }
+        }
+        if (best != cur) setTarget(best);
     }
     private void endAtk() { entityData.set(ATK, -1); entityData.set(ATK_T, 0); rest = def.rest(); }
 
