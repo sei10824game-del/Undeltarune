@@ -168,6 +168,10 @@ public final class AuUnderfellHorror {
     public static void register(List<CharacterDef> out) {
         underfell(out); horrortale(out); disbelief(out); insanity(out);
     }
+    /** Needs the base Undertale groups registered first (see Characters.init). */
+    public static void registerVariants(List<CharacterDef> out) {
+        com.undeltarune.chars.underfell.UnderfellRoster.register(out);
+    }
 
     // ================================================================ UNDERFELL
     static void underfell(List<CharacterDef> out) {

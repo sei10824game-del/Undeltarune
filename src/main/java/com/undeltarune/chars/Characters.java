@@ -21,6 +21,7 @@ public final class Characters {
         AuUnderfellHorror.register(ALL);
         AuDustLastBreath.register(ALL);
         AuMultiverse.register(ALL);
+        AuUnderfellHorror.registerVariants(ALL);
         AuYellowFangames.register(ALL);
         // ponytail: duplicate ids across group files keep the first; split into distinct ids later
         var seen = new java.util.HashSet<String>();
